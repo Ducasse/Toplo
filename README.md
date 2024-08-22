@@ -16,7 +16,18 @@ You can get started on **Bloc**, **Toplo** and **Style Sheets** on [this page](d
 
 ## Install
 
-The project can be loaded as usual via Metacello, using the `BaselineOfToplo` specification. To copy/paste a loading script, see the [wiki page](../../wiki/Install).
+The project can be loaded as usual via Metacello, using the `BaselineOfToplo` specification. To copy/paste a loading script
+
+```
+EpMonitor disableDuring: [
+    [ Metacello new baseline: 'Toplo';
+        repository: 'github://pharo-graphics/Toplo:master/src';
+        onConflictUseIncoming;
+        ignoreImage;
+        load.
+    ] on: MCMergeOrLoadWarning do: [ :warning | warning load ].
+]
+```
 
 
 ## Branches & Contributions
