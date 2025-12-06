@@ -8,6 +8,11 @@ Class {
 	#category : #'Toplo-MenuRegistration-New'
 }
 
+{ #category : #accessing }
+SMenuBuilder >> collectedItems [
+	^ items
+]
+
 { #category : #initialization }
 SMenuBuilder >> initialize [
 
@@ -17,9 +22,12 @@ SMenuBuilder >> initialize [
 
 { #category : #accessing }
 SMenuBuilder >> item: aString [ 
-	"Creates a new item"
+	"Creates and retrun a new item"
 	
-	items add: (self newItemNamed: aString)
+	| item |
+	item := (self newItemNamed: aString).
+	items add: item.
+	^ item
 ]
 
 { #category : #accessing }
@@ -41,4 +49,9 @@ SMenuBuilder >> newSubItem [
 	reg := SMenuUserDescription owner: currentRoot.
 	currentRoot addItem: reg.
 	^ reg
+]
+
+{ #category : #accessing }
+SMenuBuilder >> parent: aString [ 
+	self shouldBeImplemented.
 ]

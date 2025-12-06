@@ -6,3 +6,10 @@ Class {
 	],
 	#category : #'Toplo-MenuRegistration-New'
 }
+
+{ #category : #accessing }
+SAbstractMenuSpec >> parent: aString [
+
+	parent := aString
+	
+]

@@ -21,6 +21,15 @@ SMenuBuilderTest >> setUp [
 ]
 
 { #category : #'tests - collection' }
+SMenuBuilderTest >> testCollectItemWithParent [
+
+	(builder item: #MyOwnCoolTool)
+		parent: #Tools.
+	self assert: builder collectedItems size equals: 1. 
+	
+]
+
+{ #category : #'tests - collection' }
 SMenuBuilderTest >> testCollectSimpleItemName [
 
 	| item |
@@ -31,6 +40,14 @@ SMenuBuilderTest >> testCollectSimpleItemName [
 
 { #category : #'tests - collection' }
 SMenuBuilderTest >> testCollectTwoSimpleItems [
+
+	builder item: #MyOwnCoolTool.
+	builder item: #MyOwnCoolTool2.
+	self assert: builder collectedItems size equals: 2.
+]
+
+{ #category : #'tests - collection' }
+SMenuBuilderTest >> testItemNamed [
 
 	| item |
 	builder item: #MyOwnCoolTool.
