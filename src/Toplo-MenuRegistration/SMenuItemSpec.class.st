@@ -16,7 +16,9 @@ Class {
 		'enabledBlock',
 		'keyText',
 		'help',
-		'name'
+		'name',
+		'target',
+		'selector'
 	],
 	#category : #'Toplo-MenuRegistration-New'
 }
@@ -27,7 +29,7 @@ SMenuItemSpec >> action [
 	^action
 ]
 
-{ #category : #accessing }
+{ #category : #'public api' }
 SMenuItemSpec >> action: aMessageSend [
 	"Answer the action associated with the receiver"
 	action := aMessageSend
@@ -83,7 +85,7 @@ SMenuItemSpec >> help [
 	^ help
 ]
 
-{ #category : #accessing }
+{ #category : #'public api' }
 SMenuItemSpec >> help: aSymbol [
 	"Indicate the message to retrieve the help texts of this element."
 	help := aSymbol
@@ -94,7 +96,7 @@ SMenuItemSpec >> icon [
 	^ self iconFormSet ifNotNil: [ :formSet | formSet asForm ]
 ]
 
-{ #category : #accessing }
+{ #category : #'public api' }
 SMenuItemSpec >> icon: aForm [
 	self iconFormSet: (aForm ifNotNil: [ FormSet form: aForm ])
 ]
@@ -109,12 +111,17 @@ SMenuItemSpec >> iconFormSet: aFormSet [
 	iconFormSet := aFormSet
 ]
 
+{ #category : #'public api' }
+SMenuItemSpec >> iconName: aSymbol [ 
+	self icon: (Smalltalk ui icons iconNamed: aSymbol)
+]
+
 { #category : #accessing }
 SMenuItemSpec >> keyText [
 	^keyText
 ]
 
-{ #category : #accessing }
+{ #category : #'public api' }
 SMenuItemSpec >> keyText: aString [
 	keyText := aString
 ]
@@ -125,7 +132,7 @@ SMenuItemSpec >> label [
 	^label
 ]
 
-{ #category : #accessing }
+{ #category : #'public api' }
 SMenuItemSpec >> label: aString [
 	"Set the receiver's label"
 	label := aString
@@ -136,15 +143,30 @@ SMenuItemSpec >> name [
 	^ name
 ]
 
-{ #category : #accessing }
+{ #category : #'public api' }
 SMenuItemSpec >> name: anObject [
 	name := anObject
 ]
 
 { #category : #accessing }
+SMenuItemSpec >> selector [
+
+	^ action selector
+]
+
+{ #category : #accessing }
+SMenuItemSpec >> selector: aSymbol [
+	"set the selector for item with an action"
+	
+	action
+		ifNil: [ action := MessageSend new selector: aSymbol ; yourself ]
+		ifNotNil: [ action selector: aSymbol ]
+]
+
+{ #category : #accessing }
 SMenuItemSpec >> separator [
 	"Answer whether the receiver should be followed by a separator"
-	^separator ifNil:[false]
+	^separator ifNil: [ false ]
 ]
 
 { #category : #accessing }
@@ -163,4 +185,32 @@ SMenuItemSpec >> subMenu [
 SMenuItemSpec >> subMenu: aMenuSpec [
 	"Answer the receiver's subMenu"
 	subMenu := aMenuSpec
+]
+
+{ #category : #accessing }
+SMenuItemSpec >> target [
+
+	^ action receiver
+]
+
+{ #category : #accessing }
+SMenuItemSpec >> target: anObject [
+	"set the target for the action"
+
+	"I will not check that anObject is not nil. Let it fails!"
+	action
+		ifNil: [ action := MessageSend receiver: anObject selector: nil ]
+		ifNotNil: [ action receiver: anObject ]
+
+	"I would like to see if I can avoid the itemReceiver sharing. Because two subitms may share the same owner.
+	action
+		ifNil: [self spec action: (MessageSend receiver: (anObject ifNil: [owner itemReceiver]) selector: nil)]
+		ifNotNil: [self spec action receiver: anObject]
+	"
+		
+]
+
+{ #category : #'public api' }
+SMenuItemSpec >> withSeparatorAfter [
+	self separator: true
 ]

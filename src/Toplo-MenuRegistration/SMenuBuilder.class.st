@@ -39,7 +39,10 @@ SMenuBuilder >> itemNamed: aString [
 { #category : #'instance creation' }
 SMenuBuilder >> newItemNamed: aString [ 
 	
-	^ SMenuItemSpec new name: aString
+	^ SMenuItemSpec new 
+			name: aString;
+			label: aString asString; 
+			yourself	
 ]
 
 { #category : #'instance creation' }
@@ -54,4 +57,10 @@ SMenuBuilder >> newSubItem [
 { #category : #accessing }
 SMenuBuilder >> parent: aString [ 
 	self shouldBeImplemented.
+]
+
+{ #category : #'menu protocol' }
+SMenuBuilder >> withSeparatorAfter [
+	items ifEmpty: [ ^ self ].
+	items last withSeparatorAfter
 ]
