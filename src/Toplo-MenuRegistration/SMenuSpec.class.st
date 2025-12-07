@@ -6,7 +6,6 @@ Class {
 	#name : #SMenuSpec,
 	#superclass : #SAbstractMenuSpec,
 	#instVars : [
-		'label',
 		'model',
 		'items',
 		'parentMenu'
@@ -17,6 +16,11 @@ Class {
 { #category : #'instance creation' }
 SMenuSpec class >> withModel: aModel [
 	^ self new model: aModel
+]
+
+{ #category : #visiting }
+SMenuSpec >> accept: aToploVisitor [ 
+	^ aToploVisitor visitMenu: self
 ]
 
 { #category : #construction }
@@ -50,6 +54,11 @@ SMenuSpec >> add: aString selector: aSelector argumentList: anArray [
 { #category : #construction }
 SMenuSpec >> add: aString target: anObject selector: aSelector argumentList: anArray [
 	^ self add: aString translated action: (MessageSend receiver: anObject selector: aSelector arguments: anArray)
+]
+
+{ #category : #construction }
+SMenuSpec >> addItem: anItem [
+	self items add: anItem
 ]
 
 { #category : #construction }
@@ -89,18 +98,15 @@ SMenuSpec >> addSeparator [
 ]
 
 { #category : #accessing }
+SMenuSpec >> initialize [ 
+
+	super initialize.
+	items := OrderedCollection new. 
+]
+
+{ #category : #accessing }
 SMenuSpec >> items [
-	^ items ifNil: [ items := OrderedCollection new ]
-]
-
-{ #category : #accessing }
-SMenuSpec >> label [
-	^ label
-]
-
-{ #category : #accessing }
-SMenuSpec >> label: aString [
-	label := aString
+	^ items
 ]
 
 { #category : #accessing }

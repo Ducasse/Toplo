@@ -8,13 +8,26 @@ Class {
 SToploVisitor class >> open [
 	<script>
 	
-	| builder menuPane |
+	| builder visitor |
 	builder := SMenuBuilder new.
 	builder item: #Tools.
-	
-	menuPane := builder accept: ToploVisitor new.
-	menuPane openInSpace.
+	visitor := SToploVisitor new.
+	builder accept: visitor.
+	visitor menuPane openInSpace.
 	builder inspect.
+]
+
+{ #category : #'instance creation' }
+SToploVisitor class >> trying [
+	<script>
+	
+	| menuPane menuItem menu |
+	menuPane := ToMenuPane new. 
+	menuItem := ToMenuItem new  labelText: 'Menu item'.
+	menu :=  ToMenu new labelText: 'Menu'.
+	menu addItem: menuItem. 
+	menuPane addItem: menu.
+	menuPane openInSpace
 ]
 
 { #category : #initialization }
@@ -23,14 +36,23 @@ SToploVisitor >> initialize [
 	menuPane := ToMenuPane new
 ]
 
+{ #category : #accessing }
+SToploVisitor >> menuPane [
+	^ menuPane
+]
+
 { #category : #visiting }
 SToploVisitor >> visitBuilder: aMenuBuilder [
 
 	"aMenuBuilder collectedItems do: [ :item |
 		item isGroup ifFalse: ["
 			
-	aMenuBuilder items do: [ :each |  		
-	menuPane addItem: (each accept: self) ].
+	| menuSpecs |
+	menuSpecs := aMenuBuilder items collect: [ :each | SMenuSpec new label: 'Faked Root' ; addItem: each ].  	
+			"for now we will simulate the presence of SMenuSpec"
+	
+	menuSpecs do: [ :s | 
+		menuPane addItem: (s accept: self) ].
 	^ menuPane
 	
 ]
@@ -38,38 +60,20 @@ SToploVisitor >> visitBuilder: aMenuBuilder [
 { #category : #'Protocol (visiting) - 2 selector(s)' }
 SToploVisitor >> visitMenu: aMenu [
 
-	menuPane addItem: (ToMenu new labelText: aMenu label)
-]
-
-{ #category : #visiting }
-SToploVisitor >> visitMenuBuilder: aMenuBuilder [
-
-	aMenuBuilder collectedItems do: [ :item |
-		item isGroup ifFalse: [
-			
-			menuPane addItem: (item accept: self) ] ].
-	^ menuPane
-	
+	| tmenu |
+	tmenu := ToMenu new labelText: aMenu label; yourself.
+	aMenu items do: [ :item |
+		tmenu addItem: (item accept: self) ].
+	^ tmenu
 ]
 
 { #category : #'Protocol (visiting) - 2 selector(s)' }
-SToploVisitor >> visitMenuRegistration: aMenuRegistration [
+SToploVisitor >> visitMenuItem: aMenuItem [
 
-	| menu |
-	aMenuRegistration hasChildren
-		ifTrue: [
-			menu := ToMenu new labelText: aMenuRegistration curatedLabel.
-			aMenuRegistration childrenItems do: [ :subItem |
-				subItem isGroup 
-					ifFalse: [ 
-							menu addItem: (subItem accept: self).
-							aMenuRegistration separator ifTrue: [ menu addSeparator ] ] ].
-			 ]
-		
-		ifFalse: [
-			menu := ToMenuItem new labelText: aMenuRegistration curatedLabel.
-			menu clickAction: aMenuRegistration action.
-			aMenuRegistration hasIcon ifTrue: [ menu iconImage: aMenuRegistration icon asElement ] ].
+	| tmenu |
+	tmenu := ToMenuItem new labelText: aMenuItem label; yourself .
+	tmenu clickAction: aMenuItem action.
+	aMenuItem hasIcon ifTrue: [ tmenu iconImage: aMenuItem icon asElement ].
+	^ tmenu
 	
-	^ menu
 ]

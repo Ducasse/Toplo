@@ -48,6 +48,11 @@ SMenuBuilder >> items [
 	^ items
 ]
 
+{ #category : #'t - menu item' }
+SMenuBuilder >> menuPane [
+	self shouldBeImplemented.
+]
+
 { #category : #'instance creation' }
 SMenuBuilder >> newItemNamed: aString [ 
 	

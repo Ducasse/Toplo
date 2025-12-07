@@ -14,7 +14,12 @@ SMenuDeclarationVisitor >> visitMenu: aMenu [
 ]
 
 { #category : #visiting }
-SMenuDeclarationVisitor >> visitMenuItem: aMenu [
+SMenuDeclarationVisitor >> visitMenuItem: aMenuItem [
 
-	self subclassResponsibility
+	| tmenu|
+	tmenu := ToMenuItem new labelText: aMenuItem label.
+	tmenu clickAction: aMenuItem action.
+	aMenuItem hasIcon ifTrue: [ tmenu iconImage: aMenuItem icon asElement ].
+	^ tmenu
+	
 ]

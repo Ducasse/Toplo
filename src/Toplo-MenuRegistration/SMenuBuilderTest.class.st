@@ -39,6 +39,26 @@ SMenuBuilderTest >> setUp [
 	builder := SMenuBuilder new
 ]
 
+{ #category : #'tests - item basic properties' }
+SMenuBuilderTest >> testActionCullOnEmptyUnsetActionDeclaration [
+	
+	| item |
+	item := (builder item: #MyOwnCoolTool).
+	self shouldnt: [ (item action cull: 33) ]raise: MessageNotUnderstood 
+
+]
+
+{ #category : #'tests - item basic properties' }
+SMenuBuilderTest >> testActionDeclaration [
+	
+	| item |
+	item := (builder item: #MyOwnCoolTool).
+	item action: [ #go ] .
+	self 
+		assert: item action value 
+		equals: #go
+]
+
 { #category : #'tests - collection' }
 SMenuBuilderTest >> testCollectItemWithParent [
 

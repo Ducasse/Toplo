@@ -6,7 +6,6 @@ Class {
 	#name : #SMenuItemSpec,
 	#superclass : #SAbstractMenuSpec,
 	#instVars : [
-		'label',
 		'action',
 		'checked',
 		'enabled',
@@ -23,10 +22,15 @@ Class {
 	#category : #'Toplo-MenuRegistration-New'
 }
 
+{ #category : #visiting }
+SMenuItemSpec >> accept: aToploVisitor [ 
+	^ aToploVisitor visitMenuItem: self
+]
+
 { #category : #accessing }
 SMenuItemSpec >> action [
 	"Answer the action associated with the receiver"
-	^action
+	^ action ifNil: [ MessageSend new selector: #value ; yourself ]
 ]
 
 { #category : #'public api' }
@@ -79,6 +83,11 @@ SMenuItemSpec >> hasCheckBox [
 	^ checked isNotNil
 ]
 
+{ #category : #testing }
+SMenuItemSpec >> hasIcon [
+	^ self icon isNotNil
+]
+
 { #category : #accessing }
 SMenuItemSpec >> help [
 	"Answer the message to get the help texts of this element."
@@ -124,18 +133,6 @@ SMenuItemSpec >> keyText [
 { #category : #'public api' }
 SMenuItemSpec >> keyText: aString [
 	keyText := aString
-]
-
-{ #category : #accessing }
-SMenuItemSpec >> label [
-	"Answer the receiver's label"
-	^label
-]
-
-{ #category : #'public api' }
-SMenuItemSpec >> label: aString [
-	"Set the receiver's label"
-	label := aString
 ]
 
 { #category : #accessing }

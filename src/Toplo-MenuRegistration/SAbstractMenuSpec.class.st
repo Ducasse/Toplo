@@ -3,10 +3,23 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'parent',
-		'order'
+		'order',
+		'label'
 	],
 	#category : #'Toplo-MenuRegistration-New'
 }
+
+{ #category : #accessing }
+SAbstractMenuSpec >> label [
+	"Answer the receiver's label"
+	^label
+]
+
+{ #category : #'public api' }
+SAbstractMenuSpec >> label: aString [
+	"Set the receiver's label"
+	label := aString
+]
 
 { #category : #accessing }
 SAbstractMenuSpec >> order [
@@ -33,4 +46,13 @@ SAbstractMenuSpec >> parent: aString [
 
 	parent := aString
 	
+]
+
+{ #category : #printing }
+SAbstractMenuSpec >> printOn: aStream [
+
+	super printOn: aStream. 
+	aStream << ' ('.
+	aStream print: self label.
+	aStream << ')'.
 ]

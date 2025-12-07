@@ -11,7 +11,7 @@ ToploVisitor class >> open [
 	| builder menuPane |
 	builder := SMenuBuilder new.
 	builder item: #Tools.
-	
+	self halt.
 	menuPane := builder accept: ToploVisitor new.
 	menuPane openInSpace.
 	builder inspect.
@@ -29,15 +29,13 @@ ToploVisitor >> visitBuilder: aMenuBuilder [
 	"aMenuBuilder collectedItems do: [ :item |
 		item isGroup ifFalse: ["
 			
-	aMenuBuilder items do: [ :each |  		
-	menuPane addItem: (each accept: self) ].
-	^ menuPane
+	| menuSpecs |
+	menuSpecs := aMenuBuilder items collect: [ :each | SMenuSpec new addItem: each ].  	
+			"for now we will simulate the presence of SMenuSpec"
 	
-]
-
-{ #category : #'Protocol (visiting) - 2 selector(s)' }
-ToploVisitor >> visitMenu: aMenu [
-
+	menuSpecs do: [ :s | 
+		menuPane addItem: (s accept: self) ].
+	^ menuPane
 	
 ]
 
