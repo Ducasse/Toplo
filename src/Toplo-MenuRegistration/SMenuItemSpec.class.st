@@ -17,7 +17,8 @@ Class {
 		'help',
 		'name',
 		'target',
-		'selector'
+		'selector',
+		'subMNenu'
 	],
 	#category : #'Toplo-MenuRegistration-New'
 }
@@ -125,6 +126,13 @@ SMenuItemSpec >> iconName: aSymbol [
 	self icon: (Smalltalk ui icons iconNamed: aSymbol)
 ]
 
+{ #category : #initialization }
+SMenuItemSpec >> initialize [ 
+
+	super initialize.
+	subMenu := OrderedCollection new
+]
+
 { #category : #accessing }
 SMenuItemSpec >> keyText [
 	^keyText
@@ -173,9 +181,9 @@ SMenuItemSpec >> separator: aBool [
 ]
 
 { #category : #accessing }
-SMenuItemSpec >> subMenu [
-	"Answer the receiver's subMenu"
-	^subMenu
+SMenuItemSpec >> subMenu [ 
+
+	^ subMNenu
 ]
 
 { #category : #accessing }

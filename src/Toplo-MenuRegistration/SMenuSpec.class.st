@@ -23,12 +23,12 @@ SMenuSpec >> accept: aToploVisitor [
 	^ aToploVisitor visitMenu: self
 ]
 
-{ #category : #construction }
+{ #category : #'simple item building' }
 SMenuSpec >> add: aString [
 	^ self add: aString action: nil
 ]
 
-{ #category : #construction }
+{ #category : #'simple item building' }
 SMenuSpec >> add: aString action: aMessageSend [
 	| item |
 	item := self addMenuItem.
@@ -37,7 +37,7 @@ SMenuSpec >> add: aString action: aMessageSend [
 	^item
 ]
 
-{ #category : #construction }
+{ #category : #'simple item building' }
 SMenuSpec >> add: aString selector: aMessageSend [
 	| item |
 	item := self addMenuItem.
@@ -46,22 +46,22 @@ SMenuSpec >> add: aString selector: aMessageSend [
 	^item
 ]
 
-{ #category : #construction }
+{ #category : #'simple item building' }
 SMenuSpec >> add: aString selector: aSelector argumentList: anArray [
 	^ self add: aString action: (MessageSend receiver: model selector: aSelector arguments: anArray)
 ]
 
-{ #category : #construction }
+{ #category : #'simple item building' }
 SMenuSpec >> add: aString target: anObject selector: aSelector argumentList: anArray [
 	^ self add: aString translated action: (MessageSend receiver: anObject selector: aSelector arguments: anArray)
 ]
 
-{ #category : #construction }
+{ #category : #building }
 SMenuSpec >> addItem: anItem [
 	self items add: anItem
 ]
 
-{ #category : #construction }
+{ #category : #'simple item building' }
 SMenuSpec >> addList: aList [
 	"Add the given items to this menu, where each item is a pair (<string> <actionSelector>).  If an element of the list is simply the symobl $-, add a line to the receiver. The optional third element of each entry, if present, provides balloon help."
 
@@ -82,7 +82,7 @@ SMenuSpec >> addList: aList [
 						ifTrue: [ item icon: (self theme iconNamed: tuple fourth) ] ] ]
 ]
 
-{ #category : #construction }
+{ #category : #'simple item building' }
 SMenuSpec >> addMenuItem [
 	| item |
 	item := self newMenuItem.
@@ -90,14 +90,14 @@ SMenuSpec >> addMenuItem [
 	^item
 ]
 
-{ #category : #construction }
+{ #category : #building }
 SMenuSpec >> addSeparator [
 	self items isEmpty
 		ifTrue: [ ^ nil ].
 	self items last separator: true
 ]
 
-{ #category : #accessing }
+{ #category : #initialization }
 SMenuSpec >> initialize [ 
 
 	super initialize.
@@ -109,17 +109,17 @@ SMenuSpec >> items [
 	^ items
 ]
 
-{ #category : #accessing }
+{ #category : #'simple item building' }
 SMenuSpec >> model [
 	^ model
 ]
 
-{ #category : #accessing }
+{ #category : #'simple item building' }
 SMenuSpec >> model: anObject [
 	model := anObject
 ]
 
-{ #category : #construction }
+{ #category : #'simple item building' }
 SMenuSpec >> newMenuItem [
 
 	^ SMenuItemSpec new

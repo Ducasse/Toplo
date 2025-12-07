@@ -59,7 +59,7 @@ SMenuBuilderTest >> testActionDeclaration [
 		equals: #go
 ]
 
-{ #category : #'tests - collection' }
+{ #category : #'tests - collection before resolution' }
 SMenuBuilderTest >> testCollectItemWithParent [
 
 	(builder item: #MyOwnCoolTool)
@@ -73,7 +73,7 @@ SMenuBuilderTest >> testCollectItemWithParent [
 		equals: #Tools
 ]
 
-{ #category : #'tests - collection' }
+{ #category : #'tests - collection before resolution' }
 SMenuBuilderTest >> testCollectSimpleItemName [
 
 	| item |
@@ -82,7 +82,7 @@ SMenuBuilderTest >> testCollectSimpleItemName [
 	self assert: item name equals: #MyOwnCoolTool
 ]
 
-{ #category : #'tests - collection' }
+{ #category : #'tests - collection before resolution' }
 SMenuBuilderTest >> testCollectTwoSimpleItems [
 
 	builder item: #MyOwnCoolTool.
@@ -123,7 +123,7 @@ SMenuBuilderTest >> testIconNameDeclaration [
 		equals: (Smalltalk ui icons iconNamed: #go)
 ]
 
-{ #category : #'tests - collection' }
+{ #category : #'tests - collection before resolution' }
 SMenuBuilderTest >> testItemNamed [
 
 	| item |
@@ -181,6 +181,27 @@ SMenuBuilderTest >> testOrderDeclaration [
 		equals: 9999
 ]
 
+{ #category : #'tests - collection before resolution' }
+SMenuBuilderTest >> testRootsBeforeResolution [
+
+	builder item: #Pharo.
+	(builder item: #Setting)
+		parent: #Pharo.
+		
+	builder item: #Browse.
+	(builder item: #SystemBrowwer)
+		parent: #Browse.
+			
+	self assert: builder collectedItems size equals: 4.
+
+	self 
+		assert: builder roots size 
+		equals: 2. 
+
+	builder roots do: [ :each | 
+		self assert: ( #(#Pharo #Browse) includes: each name ) ]
+]
+
 { #category : #'tests - item basic properties' }
 SMenuBuilderTest >> testTargetSelector [
 
@@ -194,6 +215,27 @@ SMenuBuilderTest >> testTargetSelector [
 	self assert: item selector equals: #return33.
 	self assert: item target class equals: self class.
 	
+]
+
+{ #category : #'tests - after resolution' }
+SMenuBuilderTest >> testTreesAfterResolution [
+
+	builder item: #Pharo.
+	(builder item: #Setting)
+		parent: #Pharo.
+		
+	builder item: #Browse.
+	(builder item: #SystemBrowwer)
+		parent: #Browse.
+			
+	self assert: builder collectedItems size equals: 4.
+
+	self 
+		assert: builder roots size 
+		equals: 2. 
+
+	builder roots do: [ :each | 
+		self assert: ( #(#Pharo #Browse) includes: each name ) ]
 ]
 
 { #category : #'tests - item basic properties' }
