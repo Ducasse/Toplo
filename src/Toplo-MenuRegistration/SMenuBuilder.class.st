@@ -8,6 +8,12 @@ Class {
 	#category : #'Toplo-MenuRegistration-New'
 }
 
+{ #category : #visiting }
+SMenuBuilder >> accept: aToploVisitor [ 
+	
+	^ aToploVisitor visitBuilder: self
+]
+
 { #category : #accessing }
 SMenuBuilder >> collectedItems [
 	^ items
@@ -20,7 +26,7 @@ SMenuBuilder >> initialize [
 	items := OrderedCollection new
 ]
 
-{ #category : #accessing }
+{ #category : #'public scripting API' }
 SMenuBuilder >> item: aString [ 
 	"Creates and retrun a new item"
 	
@@ -36,6 +42,12 @@ SMenuBuilder >> itemNamed: aString [
 	^ items detect: [ :each | each name = aString ] ifNone: [ nil ]
 ]
 
+{ #category : #accessing }
+SMenuBuilder >> items [
+
+	^ items
+]
+
 { #category : #'instance creation' }
 SMenuBuilder >> newItemNamed: aString [ 
 	
@@ -49,17 +61,13 @@ SMenuBuilder >> newItemNamed: aString [
 SMenuBuilder >> newSubItem [
 
 	| reg |
-	reg := SMenuUserDescription owner: currentRoot.
+	self halt.
+	reg := SMenuItemSpec new.
 	currentRoot addItem: reg.
 	^ reg
 ]
 
-{ #category : #accessing }
-SMenuBuilder >> parent: aString [ 
-	self shouldBeImplemented.
-]
-
-{ #category : #'menu protocol' }
+{ #category : #'public scripting API' }
 SMenuBuilder >> withSeparatorAfter [
 	items ifEmpty: [ ^ self ].
 	items last withSeparatorAfter

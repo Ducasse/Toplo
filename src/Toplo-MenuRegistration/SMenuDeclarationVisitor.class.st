@@ -7,20 +7,14 @@ Class {
 	#category : #'Toplo-MenuRegistration-New'
 }
 
-{ #category : #accessing }
-SMenuDeclarationVisitor >> menuPane [
-
-	^ menuPane
-]
-
 { #category : #visiting }
-SMenuDeclarationVisitor >> visitMenuBuilder: aMenuBuilder [
+SMenuDeclarationVisitor >> visitMenu: aMenu [
 
 	self subclassResponsibility
 ]
 
 { #category : #visiting }
-SMenuDeclarationVisitor >> visitMenuRegistration: aMenuRegistration [
+SMenuDeclarationVisitor >> visitMenuItem: aMenu [
 
 	self subclassResponsibility
 ]

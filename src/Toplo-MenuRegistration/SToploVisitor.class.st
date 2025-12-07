@@ -1,11 +1,11 @@
 Class {
-	#name : #ToploVisitor,
+	#name : #SToploVisitor,
 	#superclass : #SMenuDeclarationVisitor,
 	#category : #'Toplo-MenuRegistration-New'
 }
 
 { #category : #'instance creation' }
-ToploVisitor class >> open [
+SToploVisitor class >> open [
 	<script>
 	
 	| builder menuPane |
@@ -18,13 +18,13 @@ ToploVisitor class >> open [
 ]
 
 { #category : #initialization }
-ToploVisitor >> initialize [
+SToploVisitor >> initialize [
 
 	menuPane := ToMenuPane new
 ]
 
 { #category : #visiting }
-ToploVisitor >> visitBuilder: aMenuBuilder [
+SToploVisitor >> visitBuilder: aMenuBuilder [
 
 	"aMenuBuilder collectedItems do: [ :item |
 		item isGroup ifFalse: ["
@@ -36,13 +36,13 @@ ToploVisitor >> visitBuilder: aMenuBuilder [
 ]
 
 { #category : #'Protocol (visiting) - 2 selector(s)' }
-ToploVisitor >> visitMenu: aMenu [
+SToploVisitor >> visitMenu: aMenu [
 
-	
+	menuPane addItem: (ToMenu new labelText: aMenu label)
 ]
 
 { #category : #visiting }
-ToploVisitor >> visitMenuBuilder: aMenuBuilder [
+SToploVisitor >> visitMenuBuilder: aMenuBuilder [
 
 	aMenuBuilder collectedItems do: [ :item |
 		item isGroup ifFalse: [
@@ -53,7 +53,7 @@ ToploVisitor >> visitMenuBuilder: aMenuBuilder [
 ]
 
 { #category : #'Protocol (visiting) - 2 selector(s)' }
-ToploVisitor >> visitMenuRegistration: aMenuRegistration [
+SToploVisitor >> visitMenuRegistration: aMenuRegistration [
 
 	| menu |
 	aMenuRegistration hasChildren
