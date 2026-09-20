@@ -4,36 +4,56 @@ Class {
 	#traits : 'TBlEventTarget',
 	#classTraits : 'TBlEventTarget classTrait',
 	#instVars : [
-		'eventTarget',
+		'element',
 		'enabled',
 		'operator',
-		'selectionModel',
 		'multiple',
 		'eventDispatcher',
-		'commandApplierEventHandler',
-		'selectionChangedEventClass'
+		'selectionChangedEventClass',
+		'selectionMode',
+		'selectionModel',
+		'commandApplicationStrategy'
 	],
 	#category : #'Toplo-Widget-List-Selection-Selecter'
 }
 
-{ #category : #adding }
+{ #category : #'command application' }
 ToListSelecter >> addCommand: aCommand [
 
 	enabled ifFalse: [ ^ self ].
-	self dispatchEvent: (ToElementCommandAddedEvent new
-			 command: aCommand;
-			 yourself)
+	aCommand addedIn: self.
+	commandApplicationStrategy addCommand: aCommand from: self
+]
+
+{ #category : #'command application' }
+ToListSelecter >> applyBasicCommand: aCommand [
+
+	| previousModel |
+	previousModel := selectionModel copy.
+	aCommand applyWithOperator: operator.
+	previousModel = aCommand selectionModel ifTrue: [ ^ self ].
+	self onCommandApplied: aCommand
 ]
 
 { #category : #'command application' }
 ToListSelecter >> applyCommand: aCommand [
 
+	element dispatchRequest:
+		(ToListSelecterCommandApplicationRequestEvent new
+			 command: aCommand;
+			 selectionModel: selectionModel;
+			 requestedAction: [ aCommand applicationResquestIn: self ];
+			 yourself)
+]
+
+{ #category : #'command application' }
+ToListSelecter >> applyCompositeCommand: aCommand [
+
 	| previousModel |
-	aCommand selectionModel: selectionModel.
 	previousModel := selectionModel copy.
 	aCommand applyWithOperator: operator.
 	previousModel = aCommand selectionModel ifTrue: [ ^ self ].
-	self commandApplied: aCommand
+	self onCommandApplied: aCommand
 ]
 
 { #category : #accessing }
@@ -48,27 +68,16 @@ ToListSelecter >> beSingleSelection [
 	self multiple: false
 ]
 
-{ #category : #'command application' }
-ToListSelecter >> commandApplied: aCommand [
+{ #category : #accessing }
+ToListSelecter >> commandApplicationStrategy [
 
-	| req |
-	selectionChangedEventClass ifNil: [ ^ self ].
-	
-	req := ToListSelectionCommandAppliedEvent new
-		       command: aCommand;
-		       requestedAction: [
-			       eventTarget dispatchEvent: (selectionChangedEventClass new
-						        command: aCommand;
-						        yourself) ];
-		       yourself.
-
-	eventTarget dispatchAuthorisationRequest: req
+	^ commandApplicationStrategy
 ]
 
 { #category : #accessing }
-ToListSelecter >> commandApplierEventHandler: aCommandApplierEventHandler [
+ToListSelecter >> commandApplicationStrategy: aCommandApplicationStrategy [
 
-	commandApplierEventHandler := aCommandApplierEventHandler
+	commandApplicationStrategy := aCommandApplicationStrategy
 ]
 
 { #category : #testing }
@@ -80,7 +89,7 @@ ToListSelecter >> containsIndex: anIndex [
 { #category : #copying }
 ToListSelecter >> copySelectionFrom: aSourceSelectionModel [
 
-	self addCommand: (ToSelectionModelCopyFromCommand new
+	self addCommand: (ToSelectionCopyFromCommand new
 			 sourceSelectionModel: aSourceSelectionModel;
 			 yourself)
 ]
@@ -91,6 +100,18 @@ ToListSelecter >> currentIndex [
 	^ enabled
 		  ifFalse: [ 0 ]
 		  ifTrue: [ operator currentIndex ]
+]
+
+{ #category : #initialization }
+ToListSelecter >> defaultCommandApplicationStrategy [
+
+	" *** Notice *** that the only working in all tested cases is the data source based strategy, in particular for infinites.
+	This is beacuse in infinite, the selection update is based on the application of datasource update commands and
+	that data source based strategy takes that implementation into account  "
+
+	"^ BlImmediateCommandApplicationStrategy new"
+	^ ToSelecterDataSourceCommandApplicationStrategy new
+	"^ BlQueueBasedCommandApplicationStrategy new"
 ]
 
 { #category : #operations }
@@ -125,10 +146,23 @@ ToListSelecter >> deselectIndexes: anArray [
 			 operation: ToRemoveSelectionOperation new)
 ]
 
+{ #category : #operations }
+ToListSelecter >> deselectInterval: anInterval [
+
+	self deselectIndex: anInterval first to: anInterval last
+]
+
 { #category : #protocol }
 ToListSelecter >> disable [
 
 	self enabled: false
+]
+
+{ #category : #accessing }
+ToListSelecter >> element [
+
+	^ element
+
 ]
 
 { #category : #protocol }
@@ -148,10 +182,7 @@ ToListSelecter >> enabled: aBoolean [
 
 	enabled = aBoolean ifTrue: [ ^ self ].
 	enabled := aBoolean.
-	eventTarget ifNil: [ ^ self ].
-	eventTarget dispatchEvent: ToSelecterChangedEvent new.
-
-
+	self updateSelection
 ]
 
 { #category : #'event management accessing' }
@@ -163,10 +194,10 @@ ToListSelecter >> eventDispatcher [
 		  eventDispatcher := BlDirectEventDispatcher on: self ]
 ]
 
-{ #category : #accessing }
-ToListSelecter >> eventTarget: anEventTarget [
+{ #category : #testing }
+ToListSelecter >> hasSelection [
 
-	eventTarget := anEventTarget 
+	^ self selectionModel isNotEmpty
 ]
 
 { #category : #initialization }
@@ -175,16 +206,15 @@ ToListSelecter >> initialize [
 	super initialize.
 	multiple := true.
 	enabled := true.
-	operator := ToSelectionModelOperator new.
-	self initializeCommandApplier
+	operator := ToSelectionModelOperator new
 ]
 
 { #category : #initialization }
-ToListSelecter >> initializeCommandApplier [
+ToListSelecter >> initializeCommandApplicationStrategy [
 
-	commandApplierEventHandler := ToDataSourceCommandApplierEventHandler new.
-	"commandApplierEventHandler := ToDirectCommandApplierEventHandler new."
-	commandApplierEventHandler := ToQueueBasedCommandApplierEventHandler new
+	commandApplicationStrategy := self defaultCommandApplicationStrategy.
+	commandApplicationStrategy ifNotNil: [
+		commandApplicationStrategy element: element ]
 ]
 
 { #category : #testing }
@@ -216,8 +246,7 @@ ToListSelecter >> multiple: aBoolean [
 
 	multiple = aBoolean ifTrue: [ ^ self ].
 	multiple := aBoolean.
-	eventTarget ifNil: [ ^ self ].
-	eventTarget dispatchEvent: ToSelecterChangedEvent new
+	self updateSelection 
 ]
 
 { #category : #private }
@@ -264,23 +293,57 @@ ToListSelecter >> nextSelectableIndexToScrollTo [
 				  ifFalse: [ 0 ] ]
 ]
 
-{ #category : #'api - hooks' }
-ToListSelecter >> onInstalledIn: anEventTarget [
-	" the argument is passed as the target of commands.
-	It receives the selection change event after the application of commands "
+{ #category : #'command application' }
+ToListSelecter >> onBasicCommandApplied: aCommand [
 
-	selectionModel on: anEventTarget.
-	eventTarget := anEventTarget.
-	commandApplierEventHandler element: anEventTarget.
-	self addEventHandler: commandApplierEventHandler
+	selectionChangedEventClass ifNil: [ ^ self ].
+
+	element dispatchEvent: (ToListSelectionCommandAppliedEvent new
+			 command: aCommand;
+			 yourself).
+
+	element dispatchEvent: (selectionChangedEventClass new
+			 appliedCommand: aCommand;
+			 selectionOption: self selectionOption;
+			 yourself)
+]
+
+{ #category : #'command application' }
+ToListSelecter >> onCommandApplied: aCommand [
+
+	aCommand onAppliedOn: self
+]
+
+{ #category : #'command application' }
+ToListSelecter >> onCompositeCommandApplied: aCommand [
+
+	
 ]
 
 { #category : #'api - hooks' }
-ToListSelecter >> onUninstalledIn: anEventTarget [
+ToListSelecter >> onInstalledIn: anElement [
 
-	eventTarget := nil.
-	self removeEventHandler: commandApplierEventHandler.
-	commandApplierEventHandler := nil
+	element := anElement.
+	selectionModel on: anElement.
+	self initializeCommandApplicationStrategy
+]
+
+{ #category : #'command application' }
+ToListSelecter >> onSelectionCopyCommandApplied: aCommand [
+
+]
+
+{ #category : #'command application' }
+ToListSelecter >> onSelectionShiftCommandApplied: aCommand [
+
+	self onBasicCommandApplied: aCommand
+]
+
+{ #category : #'api - hooks' }
+ToListSelecter >> onUninstalledIn: anElement [
+
+	commandApplicationStrategy := nil.
+	element := nil
 ]
 
 { #category : #accessing }
@@ -293,6 +356,26 @@ ToListSelecter >> operator [
 ToListSelecter >> operator: aSelectionModelOperator [
 
 	operator := aSelectionModelOperator
+]
+
+{ #category : #operations }
+ToListSelecter >> prev_shiftSelection: anInteger from: anIndex [
+
+	| cmd  count interval |
+	cmd := ToListElementCompositeCommand new.
+	(anInteger < 0 and: [ self itemCount >= anIndex ]) ifTrue: [
+			count := anInteger abs.
+			interval := anIndex to: anIndex + count - 1.
+			" run a remove selection command only if any of the removed interval is selected "
+			(self selectionModel containsAnyOfInterval: interval) ifTrue: [
+					cmd addCommand: (ToIntervalSelectionCommand new
+							 from: interval first to: interval last;
+							 operation: ToRemoveSelectionOperation new) ] ].
+	cmd addCommand: (ToSelectionShiftCommand new
+			 itemCount: anInteger;
+			 fromIndex: anIndex;
+			 yourself).
+	self addCommand: cmd
 ]
 
 { #category : #private }
@@ -337,7 +420,7 @@ ToListSelecter >> scrollToDataSourcePosition: anIndex [
 	enabled ifFalse: [ ^ self ].
 	selectionModel itemCount >= anIndex ifTrue: [
 		self addCommand: (ToScrollCommand new
-				 target: eventTarget;
+				 target: element;
 				 index: anIndex;
 				 yourself) ]
 ]
@@ -360,7 +443,7 @@ ToListSelecter >> scrollTowardEndToDataSourcePosition: anIndex [
 	selectionModel itemCount >= anIndex ifTrue: [
 		self addCommand: (ToScrollCommand new
 				 towardEnd: true;
-				 target: eventTarget;
+				 target: element;
 				 index: anIndex;
 				 yourself) ]
 ]
@@ -372,7 +455,7 @@ ToListSelecter >> scrollTowardStartToDataSourcePosition: anIndex [
 	selectionModel itemCount >= anIndex ifTrue: [
 		self addCommand: (ToScrollCommand new
 				 towardEnd: false;
-				 target: eventTarget;
+				 target: element;
 				 index: anIndex;
 				 yourself) ]
 ]
@@ -389,21 +472,17 @@ ToListSelecter >> selectAll [
 { #category : #operations }
 ToListSelecter >> selectIndex: anIndex [
 
-	self addCommand: (ToIntervalSelectionCommand new
-			 from: anIndex to: anIndex;
-			 operation: (ToAddSelectionOperation new
-					  deselectAllBefore: self isSingleSelection;
-					  yourself))
+	self selectOneMoreIndex: anIndex
 ]
 
 { #category : #operations }
 ToListSelecter >> selectIndex: aStartIndex to: anEndIndex [
 
 	self isSingleSelection ifTrue: [
-		aStartIndex ~= anEndIndex ifTrue: [
-			^ ToInvalidElementCommand signal ].
-		self selectIndex: aStartIndex.
-		^ self ].
+			aStartIndex ~= anEndIndex ifTrue: [
+				^ ToInvalidElementCommand signal ].
+			self selectOneMoreIndex: aStartIndex.
+			^ self ].
 
 	self addCommand: (ToIntervalSelectionCommand new
 			 from: aStartIndex to: anEndIndex;
@@ -423,6 +502,22 @@ ToListSelecter >> selectIndexes: anArray [
 	self addCommand: (ToIndexesSelectionCommand new
 			 indexes: anArray;
 			 operation: ToAddSelectionOperation new)
+]
+
+{ #category : #operations }
+ToListSelecter >> selectInterval: anInterval [
+
+	self selectIndex: anInterval first to: anInterval last
+]
+
+{ #category : #operations }
+ToListSelecter >> selectOneMoreIndex: anIndex [
+
+	self addCommand: (ToIntervalSelectionCommand new
+			 from: anIndex to: anIndex;
+			 operation: (ToAddSelectionOperation new
+					  deselectAllBefore: self isSingleSelection;
+					  yourself))
 ]
 
 { #category : #operations }
@@ -454,15 +549,55 @@ ToListSelecter >> selectOnlyIndexes: anArray [
 ]
 
 { #category : #accessing }
+ToListSelecter >> selectedIndex [
+
+	self selectionModel selectedIndexesCount > 1 ifTrue: [
+		Error signal: 'Only zero or one selected index is allowed' ].
+	^ self selectionModel 
+		  ifEmpty: [ 0 ]
+		  ifNotEmpty: [ :s | s firstIndex ]
+]
+
+{ #category : #accessing }
 ToListSelecter >> selectedIndexes [
 
 	^ self selectionModel selectedIndexes
 ]
 
 { #category : #accessing }
+ToListSelecter >> selectedIndexesCollect: aBlock [
+
+	^ self selectionModel selectedIndexesCollect: aBlock
+]
+
+{ #category : #accessing }
+ToListSelecter >> selectedIndexesDo: aBlock [
+
+	^ self selectionModel selectedIndexesDo: aBlock
+]
+
+{ #category : #accessing }
+ToListSelecter >> selectedIndexesIntervalsDo: aBlock [
+
+	^ self selectionModel selectedIndexesIntervalsDo: aBlock
+]
+
+{ #category : #accessing }
+ToListSelecter >> selectionChangedEventClass [
+
+	^ selectionChangedEventClass
+]
+
+{ #category : #accessing }
 ToListSelecter >> selectionChangedEventClass: anEventClass [
 
 	selectionChangedEventClass := anEventClass
+]
+
+{ #category : #accessing }
+ToListSelecter >> selectionMode: aSelectionMode [
+
+	selectionMode := aSelectionMode
 ]
 
 { #category : #accessing }
@@ -474,13 +609,19 @@ ToListSelecter >> selectionModel [
 { #category : #accessing }
 ToListSelecter >> selectionModel: aSelectionModel [
 
-	selectionModel := aSelectionModel
+	selectionModel := aSelectionModel 
+]
+
+{ #category : #accessing }
+ToListSelecter >> selectionOption [
+
+	^ selectionMode ifNotNil: [ :sm | sm selectionOption ]
 ]
 
 { #category : #operations }
 ToListSelecter >> shiftSelection: anInteger from: anIndex [
 
-	self addCommand: (ToSelectionModelShiftCommand new
+	self addCommand: (ToSelectionShiftCommand new
 			 itemCount: anInteger;
 			 fromIndex: anIndex;
 			 yourself)
@@ -489,7 +630,10 @@ ToListSelecter >> shiftSelection: anInteger from: anIndex [
 { #category : #private }
 ToListSelecter >> sideIdx: aGap [
 
-	^ enabled ifFalse: [ 0 ] ifTrue: [ selectionModel sideIdx: aGap startingAt: self currentIndex ]
+	^ enabled
+		  ifFalse: [ 0 ]
+		  ifTrue: [
+		  selectionModel sideIdx: aGap startingAt: self currentIndex ]
 ]
 
 { #category : #operations }
@@ -498,4 +642,23 @@ ToListSelecter >> switchIndexSelection: anIndex [
 	(self containsIndex: anIndex)
 		ifTrue: [ self deselectIndex: anIndex ]
 		ifFalse: [ self selectIndex: anIndex ]
+]
+
+{ #category : #accessing }
+ToListSelecter >> updateSelection [
+
+	self selectionModel deselectAll.
+	element ifNil: [ ^ self ].
+	element requestUpdateAllSelections
+]
+
+{ #category : #operations }
+ToListSelecter >> updateSelectionAfter: aValuable withDataAccessor: aDataAccessor [
+
+	| selection |
+	selection := self selectedIndexesCollect: [ :idx |
+		             aDataAccessor at: idx ].
+	aValuable value.
+	self selectOnlyIndexes:
+		(selection collect: [ :dataItem | aDataAccessor indexOf: dataItem ])
 ]

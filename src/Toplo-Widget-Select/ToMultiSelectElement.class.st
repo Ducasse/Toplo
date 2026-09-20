@@ -3,8 +3,10 @@ Class {
 	#superclass : #ToSelectElement,
 	#instVars : [
 		'hideSelected',
+		'withGroups',
+		'keepPickOrder',
 		'maxSelectedCount',
-		'keepPickOrder'
+		'isFlowable'
 	],
 	#category : #'Toplo-Widget-Select-Multi'
 }
@@ -19,28 +21,70 @@ ToMultiSelectElement >> addGroup: anObject withData: aCollection [
 	self dataAccessor addAll: aCollection
 ]
 
+{ #category : #configuration }
+ToMultiSelectElement >> applyConfiguration [
+
+	super applyConfiguration.
+	self innerElement toConfiguration isFlowable: isFlowable.
+	self innerElement keepPickOrder: keepPickOrder.
+	self endContainer maxSelectedCount: maxSelectedCount.
+	self innerElement maxSelectedCount: maxSelectedCount
+]
+
+{ #category : #accessing }
+ToMultiSelectElement >> autoDistribute: aBoolean [
+
+	self innerElement toConfiguration autoDistribute: aBoolean
+]
+
 { #category : #accessing }
 ToMultiSelectElement >> barElement [ 
 
-	^ self innerContainer
+	^ self innerElement
+]
+
+{ #category : #accessing }
+ToMultiSelectElement >> barInnerElement [ 
+
+	^ self barElement innerElement
+]
+
+{ #category : #accessing }
+ToMultiSelectElement >> barTrackElement [ 
+
+	^ self barElement innerElement trackElement
 ]
 
 { #category : #'accessing - selection' }
 ToMultiSelectElement >> checkHideSelectionFromListElement [
 
-	self innerContainer checkHideSelectionFromListElement
+	self innerElement checkHideSelectionFromListElement
 ]
 
 { #category : #'accessing - selection' }
-ToMultiSelectElement >> checkMaxSelectedCountFromListElement [
+ToMultiSelectElement >> checkMaxSelectedCountInHeader [
 
-	self innerContainer checkMaxSelectedCountFromListElement
+	self endContainer updateSelectedCountLabelWith:
+		self header selectedDataItems size
 ]
 
-{ #category : #accessing }
-ToMultiSelectElement >> fakeDataItem: aDataItem [
+{ #category : #'accessing - selection' }
+ToMultiSelectElement >> checkMaxSelectedCountInPopupList [
 
-	self innerContainer fakeDataItem: aDataItem
+	self popupListElement postponeAction: [
+		self innerElement checkMaxSelectedCount ]
+]
+
+{ #category : #'accessing - window' }
+ToMultiSelectElement >> closeOnItemPicking [
+
+	^ false
+]
+
+{ #category : #'accessing - selection' }
+ToMultiSelectElement >> haveMaxSelectedCount [
+
+	^ maxSelectedCount ~= -1
 ]
 
 { #category : #accessing }
@@ -52,62 +96,87 @@ ToMultiSelectElement >> hideSelected [
 { #category : #accessing }
 ToMultiSelectElement >> hideSelected: aBoolean [
 
-	hideSelected := aBoolean
-]
-
-{ #category : #accessing }
-ToMultiSelectElement >> iconContainer: anIconContainer [
-
-	self iconContainer = anIconContainer ifTrue: [ ^ self ].
-	self iconContainer ifNotNil: [
-		self iconContainer onUninstalledIn: self ].
-	anIconContainer selectionModel: self selectionModel.
-	self endElement: anIconContainer
+	hideSelected := aBoolean.
+	self requestConfiguration
 ]
 
 { #category : #initialization }
 ToMultiSelectElement >> initialize [
 
 	super initialize.
+	self initializeListSelectionChecker.
 	hideSelected := false.
-	maxSelectedCount := 0
+	withGroups := false.
+	isFlowable := false.
+	keepPickOrder := false.
+	maxSelectedCount := -1
+]
+
+{ #category : #initialization }
+ToMultiSelectElement >> initializeListSelectionChecker [
+
+	" add the checked to check the selection command "
+	self addEventHandler:
+		ToMultiSelectHeaderSelectionChecker new.
+	" add the handler in my sieve so that I can receive the selecter command application event  "
+	self sieve
+		addEventHandlerOn: ToListSelecterCommandApplicationRequestEvent
+		do: [ :event | | copiedEvent |
+			copiedEvent := event copy.
+			self dispatchEvent: copiedEvent.
+			event authorized: copiedEvent authorized ].
+
 ]
 
 { #category : #'instance creation' }
-ToMultiSelectElement >> innerContainerClass [
+ToMultiSelectElement >> innerElementClass [
 
-	^ ToMultiSelectBarElement
+	^ ToMultiSelectHeaderListElement
 ]
 
 { #category : #accessing }
-ToMultiSelectElement >> keepPickOrder [
+ToMultiSelectElement >> isFlowable: aBoolean [
 
-	^ keepPickOrder ifNil: [ keepPickOrder := false ]
+	isFlowable := aBoolean.
+	self requestConfiguration
+]
+
+{ #category : #accessing }
+ToMultiSelectElement >> isScrollable: aBoolean [
+
+	self innerElement toConfiguration isScrollable: aBoolean
 ]
 
 { #category : #accessing }
 ToMultiSelectElement >> keepPickOrder: aBoolean [
 
-	keepPickOrder := aBoolean
+	keepPickOrder := aBoolean.
+	self requestConfiguration
 ]
 
 { #category : #accessing }
 ToMultiSelectElement >> maxSelectedCount [
 
-	^ maxSelectedCount
+	^ maxSelectedCount 
 ]
 
 { #category : #accessing }
 ToMultiSelectElement >> maxSelectedCount: aNumber [
 
 	maxSelectedCount := aNumber.
-	self iconContainer maxSelectedCount: aNumber
+	self requestConfiguration
+]
+
+{ #category : #'t - triplet container - instance creation' }
+ToMultiSelectElement >> newEndContainer [
+
+	^ ToMultiSelectHeaderEndContainer new
 ]
 
 { #category : #'instance creation' }
-ToMultiSelectElement >> newIconContainer [
+ToMultiSelectElement >> newPopupWindowManager [
 
-	^ ToMultiSelectIconContainer new forFiltering: self isFiltrable 
+	^ ToMultiSelectPopupWindowManager new
 ]
 
 { #category : #skin }
@@ -116,45 +185,49 @@ ToMultiSelectElement >> newRawSkin [
 	^ ToMultiSelectElementSkin new
 ]
 
-{ #category : #'instance creation' }
-ToMultiSelectElement >> newWindowManager [
-
-	^ ToMultiSelectListWindowManager new
-]
-
-{ #category : #accessing }
-ToMultiSelectElement >> nodeAutoDistribution: aBoolean [
-
-	self innerContainer nodeAutoDistribution: aBoolean
-]
-
 { #category : #accessing }
 ToMultiSelectElement >> nodeBuilder: aValuable [
+	"aValuable takes 3 optional args: first, the node to build, second, the dataItem and third, the holder in the list element "
 
-	self innerContainer nodeBuilder: aValuable
+	self nodeManager nodeBuilder: aValuable
 ]
 
 { #category : #accessing }
-ToMultiSelectElement >> nodeScrolling: aBoolean [
+ToMultiSelectElement >> nodeManager [
 
-	self innerContainer nodeScrolling: aBoolean
+	^ self innerElement nodeManager
 ]
 
-{ #category : #accessing }
-ToMultiSelectElement >> nodeWrapping: aBoolean [
+{ #category : #window }
+ToMultiSelectElement >> onPopupWindowOpened [
 
-	self innerContainer nodeWrapping: aBoolean
+	super onPopupWindowOpened.
+	self checkMaxSelectedCountInPopupList 
 ]
 
 { #category : #'accessing - list' }
 ToMultiSelectElement >> setGroupIndex: anIndex [
 
-	self listElement groupSelecter selectIndex: anIndex.
-	self listElement unselectableSelecter selectIndex: anIndex
+	self popupListElement groupSelecter selectIndex: anIndex
 ]
 
 { #category : #private }
-ToMultiSelectElement >> updateSelectedCountLabel [
+ToMultiSelectElement >> showHidePlaceholder [
+	" show the placeholder in case no item is selected  "
 
-	self iconContainer updateSelectedCountLabel
+	self selectionModel ifEmpty: [
+		^ self showPlaceholder ].
+	self hidePlaceholder
+]
+
+{ #category : #accessing }
+ToMultiSelectElement >> withGroups [
+
+	^ withGroups 
+]
+
+{ #category : #accessing }
+ToMultiSelectElement >> withGroups: aBoolean [
+
+	withGroups := aBoolean
 ]

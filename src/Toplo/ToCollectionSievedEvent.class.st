@@ -1,6 +1,6 @@
 Class {
 	#name : #ToCollectionSievedEvent,
-	#superclass : #ToCollectionChangedEvent,
+	#superclass : #ToObservableCollectionEvent,
 	#instVars : [
 		'sieve'
 	],

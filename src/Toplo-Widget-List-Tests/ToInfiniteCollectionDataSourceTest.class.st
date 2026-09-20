@@ -34,11 +34,14 @@ ToInfiniteCollectionDataSourceTest >> statesOfAmerica [
 { #category : #tests }
 ToInfiniteCollectionDataSourceTest >> testEmptyInfinite [
 
-	l fitContent.
-	l forceLayout.
+	space deferAndSettle: [
+		l constraintsDo: [ :c |
+			c vertical fitContent.
+			c horizontal fitContent ] ].
+
 	self assert: l children size equals: 0.
 	self
-		assert: l size
+		assert: l extent
 		equals:
 		l padding left + l padding right
 		@ (l padding top + l padding bottom)
@@ -47,12 +50,13 @@ ToInfiniteCollectionDataSourceTest >> testEmptyInfinite [
 { #category : #tests }
 ToInfiniteCollectionDataSourceTest >> testInfiniteWithOneElement [
 
-	l dataSource collection add: self statesOfAmerica first.
-	l matchParent.
-	self assert: l children size equals: 0.
-	self waitTestingSpaces.
-	self assert: l children size equals: 1.
+	space deferAndSettle: [
+		l dataSource collection add: self statesOfAmerica first.
+		l constraintsDo: [ :c |
+			c vertical matchParent.
+			c horizontal matchParent ] ].
 
+	self assert: l children size equals: 1
 ]
 
 { #category : #tests }

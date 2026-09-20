@@ -1,37 +1,110 @@
 Class {
 	#name : #ToListNodeSelectionEventHandler,
 	#superclass : #BlCustomEventHandler,
-	#category : #'Toplo-Widget-List-Selection-Mode'
+	#instVars : [
+		'clickLauncher'
+	],
+	#category : #'Toplo-Widget-List-Node'
 }
 
-{ #category : #'events handling' }
+{ #category : #'mouse handlers' }
 ToListNodeSelectionEventHandler >> clickEvent: anEvent [
 
-	| node listElement mode |
-	node := anEvent currentTarget.
-	listElement := node holder listElement.
-	mode := listElement selectionMode.
-	mode selectOnMouseDown ifTrue: [ ^ self ].
-	self notifyClickOnNodeFromEvent: anEvent.
-	anEvent consume
+	anEvent
+		ifPrimary: [ self pickEvent: anEvent ]
+		secondary: [  ]
+		middle: [  ]
+		other: [  ]
+]
+
+{ #category : #'multiple selection' }
+ToListNodeSelectionEventHandler >> clickLauncher: aProcessOrNil [
+
+	clickLauncher := aProcessOrNil
+]
+
+{ #category : #'mouse handlers' }
+ToListNodeSelectionEventHandler >> doubleClickEvent: anEvent [
+	
+	self terminateClickLauncherOnNode: anEvent currentTarget onEvent: anEvent
 ]
 
 { #category : #'api - accessing' }
 ToListNodeSelectionEventHandler >> eventsToHandle [
 
 	^ {
-		  ToListDoubleClickEvent.
-		  BlPrimaryClickEvent.
+		  BlDoubleClickEvent.
 		  BlPrimaryMouseDownEvent.
+		  BlPrimaryClickEvent.
 		  ToListClickOnNodeRequestEvent.
-		  ToListClickOnNodeEvent }
+		  ToListClickOnNodeEvent.
+		  ToListClickOnNodeCheckboxEvent }
+]
+
+{ #category : #'multiple selection' }
+ToListNodeSelectionEventHandler >> hasClickLauncher [
+
+	^ clickLauncher notNil
+]
+
+{ #category : #'multiple selection' }
+ToListNodeSelectionEventHandler >> launchClick: aBlock event: anEvent [
+	" click launcher management to allow double click to work with several selected nodes "
+
+	| listElement node holder mode dblClickDelay modifiers shift primaryModifier |
+	node := anEvent currentTarget.
+	holder := node holder.
+	listElement := node holder listElement.
+	mode := listElement primarySelectionMode.
+	dblClickDelay := listElement selectionMode doubleClickTimeout.
+
+	(listElement hasFocus not and: [ listElement isFocusable ]) ifTrue: [
+			self terminateClickLauncherOnNode: node onEvent: anEvent.
+			^ self ].
+
+	modifiers := anEvent sourceEvent modifiers.
+	shift := modifiers notNil and: [ modifiers isShift ].
+	primaryModifier := modifiers notNil and: [
+		                   modifiers isPrimaryModifier ].
+
+	" do not try double click if ctrl or Cmd or shift is pressed "
+	(holder isSelected not or: [ primaryModifier or: [ shift ] ])
+		ifTrue: [
+				self terminateClickLauncherOnNode: node onEvent: anEvent.
+				^ aBlock value ].
+
+	" Already have a click launcher "
+	self hasClickLauncher ifTrue: [ ^ self ].
+
+	" no click launcher for only one selected node "
+	" Avoid selection size computation if all is selected "
+	mode selectedIndexesCount > 0 ifFalse: [ ^ aBlock value ].
+
+	self clickLauncher: ([
+			 dblClickDelay asDelay wait.
+			 aBlock value.
+			 self clickLauncher: nil ]
+			 forkAt: Processor lowIOPriority
+			 named: self class name)
+]
+
+{ #category : #'multiple selection' }
+ToListNodeSelectionEventHandler >> listClickOnNodeCheckboxEvent: anEvent [
+
+	self onClickOnNodeEvent: anEvent
 ]
 
 { #category : #'events handling' }
 ToListNodeSelectionEventHandler >> listClickOnNodeEvent: anEvent [
+
+	| node |
+	node := anEvent currentTarget.
+	node holder listElement isMultipleSelection
+		ifTrue: [ self multipleSelectionListClickOnNodeEvent: anEvent ]
+		ifFalse: [ self singleSelectionListClickOnNodeEvent: anEvent ]
 ]
 
-{ #category : #'mouse handlers' }
+{ #category : #'events handling' }
 ToListNodeSelectionEventHandler >> listClickOnNodeRequestEvent: aListClickOnNodeRequestEvent [
 
 	| node |
@@ -41,31 +114,56 @@ ToListNodeSelectionEventHandler >> listClickOnNodeRequestEvent: aListClickOnNode
 ]
 
 { #category : #'mouse handlers' }
-ToListNodeSelectionEventHandler >> listDoubleClickEvent: anEvent [
-]
-
-{ #category : #'mouse handlers' }
 ToListNodeSelectionEventHandler >> mouseDownEvent: anEvent [
 
-		anEvent
-		  ifPrimary: [ self primaryMouseDownEvent: anEvent ]
-		  secondary: [  ]
-		  middle: [  ]
-		  other: [  ]
+	| node listElement |
+	node := anEvent currentTarget.
+	listElement := node holder listElement.
+	listElement isEnabled ifFalse: [ ^ self ].
+
+	anEvent
+		ifPrimary: [ self primaryMouseDownEvent: anEvent ]
+		secondary: [  ]
+		middle: [  ]
+		other: [  ]
+]
+
+{ #category : #'multiple selection' }
+ToListNodeSelectionEventHandler >> multipleSelectionListClickOnNodeEvent: anEvent [
+
+	self launchClick: [ self onClickOnNodeEvent: anEvent ] event: anEvent
 ]
 
 { #category : #'mouse handlers' }
-ToListNodeSelectionEventHandler >> notifyClickOnNodeFromEvent: anEvent [
+ToListNodeSelectionEventHandler >> notifyClickOnNodeOnEvent: anEvent [
 
-	| node req |
+	| listElement node |
 	node := anEvent currentTarget.
-	req := ToListClickOnNodeRequestEvent new
-		       requestedAction: [
-			       node dispatchEvent: (ToListClickOnNodeEvent new
-						        sourceEvent: anEvent;
-						        yourself) ];
-		       yourself.
-	node dispatchAuthorisationRequest: req
+	listElement := node holder listElement.
+	listElement notifyClickOnNode: node onEvent: anEvent
+]
+
+{ #category : #'selection events' }
+ToListNodeSelectionEventHandler >> onClickOnNodeEvent: anEvent [
+
+	| listElement node mode |
+	node := anEvent currentTarget.
+	listElement := node holder listElement.
+	mode := listElement primarySelectionMode.
+	mode onClickEvent: anEvent onNode: node
+]
+
+{ #category : #'mouse handlers' }
+ToListNodeSelectionEventHandler >> pickEvent: anEvent [
+
+	| node listElement mode |
+	node := anEvent currentTarget.
+	listElement := node holder listElement.
+	listElement isEnabled ifFalse: [ ^ self ].
+	mode := listElement primarySelectionMode.
+	mode selectOnPressed ifTrue: [ ^ self ].
+	mode selectOnClick ifFalse: [ ^ self ].
+	self notifyClickOnNodeOnEvent: anEvent
 ]
 
 { #category : #'mouse handlers' }
@@ -74,9 +172,20 @@ ToListNodeSelectionEventHandler >> primaryMouseDownEvent: anEvent [
 	| node listElement mode |
 	node := anEvent currentTarget.
 	listElement := node holder listElement.
-	mode := listElement selectionMode.
-	mode allowRequestFocusOnMouseDown ifFalse: [ anEvent consume ].
-	mode := listElement selectionMode.
-	mode selectOnMouseDown ifFalse: [ ^ self ].
-	self notifyClickOnNodeFromEvent: anEvent
+	mode := listElement primarySelectionMode.
+	mode selectOnPressed ifFalse: [ ^ self ].
+	self notifyClickOnNodeOnEvent: anEvent
+]
+
+{ #category : #'single selection' }
+ToListNodeSelectionEventHandler >> singleSelectionListClickOnNodeEvent: anEvent [
+
+	self onClickOnNodeEvent: anEvent
+]
+
+{ #category : #'multiple selection' }
+ToListNodeSelectionEventHandler >> terminateClickLauncherOnNode: aNode onEvent: anEvent [
+
+	clickLauncher ifNotNil: #terminate.
+	clickLauncher := nil.
 ]

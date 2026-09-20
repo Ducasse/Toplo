@@ -1,37 +1,90 @@
+"
+Conceptually I'm a kind of abstract combox where one or several elements are selected from a list.
+ 
+There are two main kind of select: 
+- single where only one element from the list can be selected
+- multiple where multiple elements from the list can be selected
+
+My innerElement reflects this difference: it will be either a single element or a list of elements. 
+In addition the contents of my list can be filtered.
+The header can be composed of the selected elements and an icon.
+
+See https://ant.design/components/select for a functional reference. 
+
+"
 Class {
 	#name : #ToSelectElement,
-	#superclass : #ToTripletElement,
-	#traits : 'TToElementWithPlaceholder',
-	#classTraits : 'TToElementWithPlaceholder classTrait',
+	#superclass : #ToTripletContainer,
+	#traits : 'TToPlaceholderUser',
+	#classTraits : 'TToPlaceholderUser classTrait',
 	#instVars : [
 		'filtrable',
-		'windowManager'
+		'windowManager',
+		'sample'
 	],
 	#category : #'Toplo-Widget-Select-Core'
 }
 
-{ #category : #'accessing - window' }
-ToSelectElement >> closeWindow [
+{ #category : #testing }
+ToSelectElement >> allowDeselection [
 
-	^ self windowManager closeWindow
-]
-
-{ #category : #'accessing - window' }
-ToSelectElement >> currentWindow [ 
-
-	^ self windowManager currentWindow
-]
-
-{ #category : #'accessing - list' }
-ToSelectElement >> dataAccessor [
-
-	^ self listElement dataAccessor
+	^ true
 ]
 
 { #category : #accessing }
-ToSelectElement >> filterString [ 
+ToSelectElement >> anchorRoot: anElement [
 
-	^ self textInputElement filterString
+	self manager anchorRoot: anElement
+]
+
+{ #category : #configuration }
+ToSelectElement >> applyConfiguration [ 
+
+	super applyConfiguration.
+	self filterTextField selectFiltrable: filtrable.
+	sample ifNotNil: [ self innerElement sample: sample ]
+]
+
+{ #category : #'accessing - window' }
+ToSelectElement >> closeOnItemPicking [
+
+	^ true
+]
+
+{ #category : #'accessing - window' }
+ToSelectElement >> currentPopupWindow [
+
+	^ self manager currentWindow
+]
+
+{ #category : #'accessing - window' }
+ToSelectElement >> currentPopupWindowDo: aValuable [
+
+	^ self manager currentWindowDo: aValuable 
+]
+
+{ #category : #initialization }
+ToSelectElement >> defaultEventHandler [
+
+	^ ToSelectEventHandler new
+]
+
+{ #category : #initialization }
+ToSelectElement >> defaultLayout [ 
+
+	^ BlLinearLayout horizontal
+]
+
+{ #category : #'t - place holder user' }
+ToSelectElement >> elementWithPlaceHolder [
+
+	^ self innerElement
+]
+
+{ #category : #accessing }
+ToSelectElement >> filterString [
+
+	^ self filterTextField text asString
 ]
 
 { #category : #'accessing - selection' }
@@ -41,80 +94,59 @@ ToSelectElement >> filterStringChanged [
 ]
 
 { #category : #accessing }
-ToSelectElement >> filtrable [
+ToSelectElement >> filterTextField [ 
 
-	^ filtrable
+	^ self header filterTextField
 ]
 
 { #category : #accessing }
 ToSelectElement >> filtrable: aBoolean [
 
 	filtrable := aBoolean.
-	self textInputElement selectFiltrable: aBoolean
+	self requestConfiguration
+]
+
+{ #category : #accessing }
+ToSelectElement >> header [ 
+
+	^ self innerElement 
 ]
 
 { #category : #accessing }
 ToSelectElement >> iconContainer [
 
-	^ self endElement
-]
-
-{ #category : #accessing }
-ToSelectElement >> iconContainer: anIconContainer [
-
-	self endElement: anIconContainer
+	^ self endContainer
 ]
 
 { #category : #initialization }
 ToSelectElement >> initialize [
 
 	super initialize.
-	filtrable := true.
-		
+	filtrable := false.
+
 	" for the popup "
-	windowManager := self newWindowManager.
-	windowManager onInstalledIn: self.
-	
-	self iconContainer: self newIconContainer.
-	self installInnerContainer.
-	
-	self addEventHandlerOn: ToPlaceholderShownEvent do: [ :event |
-		self flag: 'The width of 16???. Why ? Anyway, it should be handled via a skin'.
-		event placeholder padding: (BlInsets left: 16).
-		event placeholder layout alignCenterLeft ].
+	windowManager := self newPopupWindowManager.
+	self addEventHandler: windowManager.
+	self ensureMiddleContainer.
+	self ensureEndContainer.
+	self addEventHandler: self defaultEventHandler.
 
 	" a select is made to be horizontal. the following constraints 
 	must be set here to initialize the resizers properly "
+	self vFitContent.
 	self hMatchParent
 ]
 
 { #category : #accessing }
-ToSelectElement >> innerContainer [
+ToSelectElement >> innerElement [
 
-	^ self middleElement 
+	^ self middleContainer 
 ]
 
 { #category : #'instance creation' }
-ToSelectElement >> innerContainerClass [
+ToSelectElement >> innerElementClass [
 
 	^ self subclassResponsibility 
-]
-
-{ #category : #accessing }
-ToSelectElement >> inputTextField [ 
-
-	^ self innerContainer inputTextField
-]
-
-{ #category : #initialization }
-ToSelectElement >> installInnerContainer [
-
-	self innerContainer ifNotNil: [ BlImmutableObjectChangeError signal ].
-	self middleElement: self newInnerContainer.
-	self middleContainer constraintsDo: [ :c |
-		c horizontal matchParent.
-		c vertical fitContent ].
-	self requestNewSkin
 ]
 
 { #category : #testing }
@@ -126,40 +158,46 @@ ToSelectElement >> isFiltrable [
 { #category : #testing }
 ToSelectElement >> isMultipleSelection [ 
 
-	^ self innerContainer isMultipleSelection
+	^ self innerElement isMultipleSelection
 ]
 
-{ #category : #'accessing - list' }
-ToSelectElement >> listDataNodeBuilder: aBuilder [
+{ #category : #testing }
+ToSelectElement >> isOutsideEvent: anEvent [
 
-	self windowManager listDataNodeBuilder: aBuilder
+	self currentPopupWindowDo: [ :w |
+		(w isOutsideEvent: anEvent) ifFalse: [ ^ false ] ].
+	^ super isOutsideEvent: anEvent
 ]
 
-{ #category : #'accessing - list' }
-ToSelectElement >> listElement [
+{ #category : #accessing }
+ToSelectElement >> manager [
 
-	^ self windowManager listElement
+	^ windowManager 
 ]
 
-{ #category : #'accessing - list' }
-ToSelectElement >> listNodeBuilder: aValuable [
+{ #category : #'t - triplet container - instance creation' }
+ToSelectElement >> newEndContainer [
 
-	self listElement nodeBuilder: aValuable
+	^ ToSelectEndContainer new
 ]
 
-{ #category : #'instance creation' }
-ToSelectElement >> newIconContainer [
-
-	^ ToSelectIconContainer new forFiltering: self isFiltrable 
-]
-
-{ #category : #'instance creation' }
-ToSelectElement >> newInnerContainer [
+{ #category : #'t - triplet container - instance creation' }
+ToSelectElement >> newMiddleContainer [ 
 
 	| container |
-	container := self innerContainerClass onSelectElement: self.
-	container id: #innerContainer.
+	container := self innerElementClass onSelectElement: self.
+	container constraintsDo: [ :c |
+		c linear vertical alignCenter.
+		c horizontal matchParent.
+		c vertical fitContent ].
+	container id: #innerElement.
 	^ container
+]
+
+{ #category : #'instance creation' }
+ToSelectElement >> newPopupWindowManager [
+
+	^ self subclassResponsibility 
 ]
 
 { #category : #skin }
@@ -174,41 +212,18 @@ ToSelectElement >> newShortcutsStore [
 	^ ToSelectShortcutsStore new
 ]
 
-{ #category : #'instance creation' }
-ToSelectElement >> newWindowManager [
+{ #category : #window }
+ToSelectElement >> onPopupWindowClosed [
 
-	^ ToSelectListWindowManager new
-]
-
-{ #category : #layout }
-ToSelectElement >> onLayout: aBounds context: aBlElementBoundsUpdateContext [
-
-	super onLayout: aBounds context: aBlElementBoundsUpdateContext.
-	"self class name trace. ' ' trace. 'onLayout: context:' traceCr"
-]
-
-{ #category : #'accessing - selection' }
-ToSelectElement >> onSelectionChangedInListElement: anEvent [
-
-	self innerContainer onSelectionChangedInSelectElement: anEvent
+	self filterTextField infinite requestFocus
 ]
 
 { #category : #window }
-ToSelectElement >> onWindowClosed [
+ToSelectElement >> onPopupWindowOpened [
 
-	self textInputElement onWindowClosed
-]
-
-{ #category : #window }
-ToSelectElement >> onWindowOpened [
-
-	self textInputElement onWindowOpened
-]
-
-{ #category : #accessing }
-ToSelectElement >> pattern [
-
-	^ self sieve pattern
+	filtrable
+		ifTrue: [ self filterTextField requestFocus ]
+		ifFalse: [ self requestFocus ]
 ]
 
 { #category : #accessing }
@@ -218,45 +233,52 @@ ToSelectElement >> pattern: aPattern [
 ]
 
 { #category : #'accessing - list' }
+ToSelectElement >> popupDataAccessor [
+
+	^ self popupListElement dataAccessor
+]
+
+{ #category : #'accessing - list' }
+ToSelectElement >> popupListElement [
+
+	^ self manager listElement
+]
+
+{ #category : #'accessing - list' }
 ToSelectElement >> popupMaxHeight: aNumber [
 
-	self windowManager maxHeight: aNumber
+	self manager maxHeight: aNumber
 ]
 
 { #category : #'accessing - list' }
 ToSelectElement >> popupMinHeight: aNumber [
 
-	self windowManager minHeight: aNumber
-]
-
-{ #category : #'accessing - list' }
-ToSelectElement >> popupPositionHook: aValuable [
-
-	self windowManager positionHook: aValuable
-]
-
-{ #category : #'accessing - list' }
-ToSelectElement >> popupSizeHook: aValuable [
-
-	self windowManager sizeHook: aValuable
+	self manager minHeight: aNumber
 ]
 
 { #category : #'accessing - window' }
-ToSelectElement >> popupWindowEvent: anEvent [ 
+ToSelectElement >> popupWindowPlacement: aPlacement [
 
-	^ self windowManager popupWindowEvent: anEvent 
+	self manager placement: aPlacement
 ]
 
 { #category : #accessing }
-ToSelectElement >> refresh [
+ToSelectElement >> sample: aDataItem [
 
-	self innerContainer refresh
+	sample := aDataItem.
+	self requestConfiguration
 ]
 
-{ #category : #layout }
-ToSelectElement >> requestLayout: x [
+{ #category : #'accessing - selection' }
+ToSelectElement >> selectedDataItems [
 
-	super requestLayout: x.
+	| originalData |
+	originalData := self sieve originalData.
+
+	"The #select: guard safely reconciles selectionModel and originalData"
+	^ self selectionModel selectedIndexes
+		select: [ :idx | idx between: 1 and: originalData size ]
+		thenCollect: [ :idx | originalData at: idx ]
 ]
 
 { #category : #accessing }
@@ -268,38 +290,25 @@ ToSelectElement >> selecter [
 { #category : #'accessing - selection' }
 ToSelectElement >> selectionModel [
 
+
 	^ self sieve selectionModel
 ]
 
 { #category : #private }
 ToSelectElement >> showHidePlaceholder [
+	" show the placeholder in case no item is selected  "
 
-	self selectionModel ifEmpty: [
-		self inputTextField text ifEmpty: [
-			^ self showPlaceholder ] ].
-	self hidePlaceholder
+	self subclassResponsibility 
 ]
 
 { #category : #accessing }
 ToSelectElement >> sieve [
 
-	^ windowManager sieve
+	^ self manager sieve
 ]
 
-{ #category : #accessing }
-ToSelectElement >> textInputElement [ 
+{ #category : #private }
+ToSelectElement >> updateHeaderFromPopupListSelection [
 
-	^ self innerContainer textInputElement
-]
-
-{ #category : #accessing }
-ToSelectElement >> windowManager [
-
-	^ windowManager
-]
-
-{ #category : #accessing }
-ToSelectElement >> windowManager: aSelectWindowManager [
-
-	windowManager := aSelectWindowManager 
+	self header updateFromPopupListSelection 
 ]

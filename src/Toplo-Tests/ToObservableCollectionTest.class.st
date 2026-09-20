@@ -8,27 +8,6 @@ Class {
 }
 
 { #category : #'tests - adding' }
-ToObservableCollectionTest >> testAdd [
-
-	| l i|
-	l := ToObservableCollection new.
-
-	l addEventHandler: (BlEventHandler
-			 on: ToCollectionAddEvent do: [ :ann | i := ann interval ]).
-	l add: 88.
-	self
-		assert: l asOrderedCollection
-		equals: #( 88 ) asOrderedCollection.
-	self assert: i notNil.
-	self assert: i equals: (1 to: 1).
-	l add: 99.
-	self assert: i equals: (2 to: 2).
-	self
-		assert: l asOrderedCollection
-		equals: #( 88 99 ) asOrderedCollection
-]
-
-{ #category : #'tests - adding' }
 ToObservableCollectionTest >> testAddAfter [
 
 	| l i |
@@ -88,6 +67,20 @@ ToObservableCollectionTest >> testAddAll [
 	c1 addAll: c2.
 	self assert: c1 asArray equals: #(1 2 3 4 5 6 7 8 9).
 	self assert: i equals: (5 to: 9)
+]
+
+{ #category : #'tests - adding' }
+ToObservableCollectionTest >> testAddAllAfterIndex [
+	"Allows one to add each element of an OrderedCollection at the end of another
+	 OrderedCollection"
+
+	| c |
+	c := ToObservableCollection new.
+	c addAll: #( 1 2 3 4 ).
+	c addAll: #( 5 6 7 8 9 ) afterIndex: 2.
+	self assert: c asArray equals: #( 1 2 5 6 7 8 9 3 4 ).
+	c addAll: #( -1 -2 -3 ) afterIndex: 4.
+	self assert: c asArray equals: #( 1 2 5 6 -1 -2 -3 7 8 9 3 4 )
 ]
 
 { #category : #'tests - adding' }
@@ -373,6 +366,27 @@ ToObservableCollectionTest >> testEventDispatcher [
 	self assert: (l eventDispatcher isKindOf: BlEventDispatcher)
 ]
 
+{ #category : #'tests - adding' }
+ToObservableCollectionTest >> testRegisterActionLink [
+
+	| l i|
+	l := ToObservableCollection new.
+
+	l addEventHandler: (BlEventHandler
+			 on: ToCollectionAddEvent do: [ :ann | i := ann interval ]).
+	l add: 88.
+	self
+		assert: l asOrderedCollection
+		equals: #( 88 ) asOrderedCollection.
+	self assert: i notNil.
+	self assert: i equals: (1 to: 1).
+	l add: 99.
+	self assert: i equals: (2 to: 2).
+	self
+		assert: l asOrderedCollection
+		equals: #( 88 99 ) asOrderedCollection
+]
+
 { #category : #'tests - removing' }
 ToObservableCollectionTest >> testRemove [
 
@@ -528,13 +542,13 @@ ToObservableCollectionTest >> testUpdateAllWith [
 		     yourself.
 
 	l addEventHandler: (BlEventHandler
-			 on: ToCollectionAllUpdatedEvent
+			 on: ToCollectionRemoveEvent
 			 do: [ :ann | i := ann interval ]).
 
 	l updateAllWith: #(  ).
 
 	self assert: i notNil.
-	self assert: i equals: (1 to: 0).
+	self assert: i equals: (1 to: 4).
 
 	self assert: l asOrderedCollection equals: #(  ) asOrderedCollection.
 
@@ -546,5 +560,5 @@ ToObservableCollectionTest >> testUpdateAllWith [
 		assert: l asOrderedCollection
 		equals: #( 5 6 7 8 9 ) asOrderedCollection.
 
-	self assert: i equals: (1 to: 5)
+	self assert: i equals: nil
 ]

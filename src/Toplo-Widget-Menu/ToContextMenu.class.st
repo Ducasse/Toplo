@@ -1,52 +1,55 @@
 Class {
 	#name : #ToContextMenu,
 	#superclass : #ToMenuWindow,
-	#traits : 'TToMenuItemHolder + TToMenuWindowModel',
-	#classTraits : 'TToMenuItemHolder classTrait + TToMenuWindowModel classTrait',
-	#instVars : [
-		'items'
-	],
+	#traits : 'TToOrientable + TToItemListOwner + TToMenuItemListUser + TToMenuWindowModel + TToItemListUser',
+	#classTraits : 'TToOrientable classTrait + TToItemListOwner classTrait + TToMenuItemListUser classTrait + TToMenuWindowModel classTrait + TToItemListUser classTrait',
 	#category : #'Toplo-Widget-Menu-Context menu'
 }
 
-{ #category : #'t - menu item holder - adding/removing' }
-ToContextMenu >> addAllItems: aCollection [
+{ #category : #'t - menu window model' }
+ToContextMenu >> close [
 
-	aCollection do: [ :item | self addItem: item ]
-]
-
-{ #category : #'t - menu item holder - adding/removing' }
-ToContextMenu >> addItem: aMenuItem [
-
-	self items add: aMenuItem.
-	self root addChild: aMenuItem.
-	aMenuItem  addedInMenu: self
-]
-
-{ #category : #'t - menu item holder - adding/removing' }
-ToContextMenu >> addSeparator [
-
-	self addItem: ToSeparatorMenuItem new
-]
-
-{ #category : #'api - displaying' }
-ToContextMenu >> close [ 
-
-	self items do: [ :it | it closeWindow ].
 	super close
 ]
 
 { #category : #'t - menu window model' }
 ToContextMenu >> closeWindow [
 
-	self isOpened ifFalse: [ ^ self ].
 	self close
 ]
 
-{ #category : #'t - menu item holder - testing' }
-ToContextMenu >> hasItems [ 
+{ #category : #'t - relayoutable window element - accessing' }
+ToContextMenu >> correctedPositionAccordingToAnchorRoot [
 
-	^ self items notEmpty
+	| t rect rootRect |
+	rect := (self measuredBounds inSpace inChild: self anchorRoot) bounds asRectangle.
+	rootRect := 0 @ 0 extent: self anchorRoot extent.
+	" just translate the position to remain (if possible) within the root bounds "
+	t := rect amountToTranslateWithin: rootRect.
+	^ self measuredPosition + t
+]
+
+{ #category : #initialization }
+ToContextMenu >> initialize [
+
+	super initialize.
+	self fitContent.
+	self closeOnPicking: true.
+	self initializeAsItemListOwner.
+	self initializeAsMenuItemListUser.
+	self root addChild: self itemList
+]
+
+{ #category : #'t - menu window model' }
+ToContextMenu >> isInline [ 
+
+	^ false
+]
+
+{ #category : #testing }
+ToContextMenu >> isMenu [
+
+	^ true
 ]
 
 { #category : #'t - menu window model' }
@@ -55,10 +58,18 @@ ToContextMenu >> isOpened [
 	^ super isOpened
 ]
 
-{ #category : #'t - menu window model' }
-ToContextMenu >> isSubmenu [ 
+{ #category : #testing }
+ToContextMenu >> isOutsideEvent: anEvent [
 
-	^ false
+	| windows |
+	windows := Array streamContents: [ :stream |
+			           self manager currentWindowDo: [ :w |
+				           w allSubwindowsDo: [ :sub | stream nextPut: sub ] ] ].
+	(windows allSatisfy: [ :w | w isOutsideEvent: anEvent ]) ifFalse: [
+		^ false ].
+	(self items allSatisfy: [ :it | it isOutsideEvent: anEvent ])
+		ifFalse: [ ^ false ].
+	^ super isOutsideEvent: anEvent
 ]
 
 { #category : #'t - menu window model' }
@@ -68,34 +79,39 @@ ToContextMenu >> isTopMenu [
 ]
 
 { #category : #accessing }
-ToContextMenu >> itemHolder [
+ToContextMenu >> itemContainer [
 
 	^ self 
 ]
 
-{ #category : #'t - menu item holder - accessing' }
-ToContextMenu >> items [
+{ #category : #'t - item list user - accessing' }
+ToContextMenu >> itemList [
 
-	^ items ifNil: [ items := OrderedCollection new ]
+	^ itemList
+]
+
+{ #category : #'t - anchored window element - accessing' }
+ToContextMenu >> menuItem [
+	" a context menu can't be in a menupane "
+	^ nil
+]
+
+{ #category : #accessing }
+ToContextMenu >> menuPane [ 
+	" a context menu can't be in a menupane "
+	^ nil
 ]
 
 { #category : #'t - menu window model' }
 ToContextMenu >> menuWindow [
 
-	^ super menuWindow
+	^ self 
 ]
 
-{ #category : #'t - menu window model' }
-ToContextMenu >> popupEvent: anEvent [
+{ #category : #'t - item list owner - initializing' }
+ToContextMenu >> newItemList [
 
-	^ super popupEvent: anEvent
-]
-
-{ #category : #'t - menu item holder - adding/removing' }
-ToContextMenu >> removeItem: aMenuItem [
-
-	self items remove: aMenuItem.
-	self root removeChild: aMenuItem.
+	^ ToMenuItemListElement new
 ]
 
 { #category : #'t - menu window model' }

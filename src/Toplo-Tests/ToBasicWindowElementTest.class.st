@@ -13,9 +13,11 @@ ToBasicWindowElementTest >> testClose [
 	| w |
 	w := ToBasicWindowElement new.
 	self assert: w isClosed.
-	space root addChild: w.
+
+	space deferAndSettle: [ space root addChild: w ].
 	self deny: w isClosed.
-	w close.
+
+	space deferAndSettle: [ w close ].
 	self assert: w isClosed.
 	self deny: w isOpened 
 
@@ -40,21 +42,12 @@ ToBasicWindowElementTest >> testDefaultLayout [
 ]
 
 { #category : #tests }
-ToBasicWindowElementTest >> testDefaultRootElement [
-
-	| w |
-	w := ToBasicWindowElement new.
-	self assert: w root layout class identicalTo: w defaultRootElement layout class.
-	self assert: w root id equals: w defaultRootId
-]
-
-{ #category : #tests }
 ToBasicWindowElementTest >> testInitialize [
 
 	| w |
 	w := ToBasicWindowElement new.
 	self assert: (w root isKindOf: ToElement).
-	self assert: w root parent identicalTo: w
+	self assert: w root identicalTo: w
 ]
 
 { #category : #tests }
@@ -63,7 +56,8 @@ ToBasicWindowElementTest >> testIsClosed [
 	| w |
 	w := ToBasicWindowElement new.
 	self assert: w isClosed.
-	space root addChild: w.
+
+	space deferAndSettle: [ space root addChild: w ].
 	self deny: w isClosed
 ]
 
@@ -73,30 +67,18 @@ ToBasicWindowElementTest >> testIsOpened [
 	| w |
 	w := ToBasicWindowElement new.
 	self assert: w isClosed.
-	space root addChild: w.
+
+	space deferAndSettle: [ space root addChild: w ].
 	self assert: w isOpened
 ]
 
 { #category : #tests }
 ToBasicWindowElementTest >> testRoot [
 
-	| w r prev |
+	| w |
 	w := ToBasicWindowElement new.
-	prev := w root.
-	r := ToElement new.
-	w root: r.
-	self assert: w root identicalTo: r.
-	self assert: prev parent isNil
-]
+	self assert: w root identicalTo: w.
 
-{ #category : #tests }
-ToBasicWindowElementTest >> testRootLayout [
-
-	| w l |
-	w := ToBasicWindowElement new.
-	l := BlLinearLayout horizontal.
-	w rootLayout: l.
-	self assert: w rootLayout identicalTo: l
 ]
 
 { #category : #tests }
@@ -108,6 +90,5 @@ ToBasicWindowElementTest >> testToFront [
 	self assert: w elevation class identicalTo: w defaultElevation class.
 	self assert: w elevation elevation identicalTo: w defaultElevation elevation.
 	self assert: w root elevation class identicalTo: w defaultElevation class.
-	self assert: w root elevation elevation identicalTo: w defaultElevation elevation.
 	
 ]

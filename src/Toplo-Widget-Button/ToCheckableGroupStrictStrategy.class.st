@@ -11,23 +11,8 @@ ToCheckableGroupStrictStrategy >> allowChangeWith: aCheckValue in: aGroup forChe
 	(aCheckValue not and: [ aCheckable checked ]) ifTrue: [
 		^ false ].
 	" ok, the button is unchecked -> uncheck others then check it"
-	aGroup uncheckAllExcept: aCheckable.
+	aCheckValue ifTrue: [ aGroup uncheckAllExcept: aCheckable ].
 	^ true
-]
-
-{ #category : #testing }
-ToCheckableGroupStrictStrategy >> allowUnchecking [
-
-	^ false
-]
-
-{ #category : #notifications }
-ToCheckableGroupStrictStrategy >> onButtonAdded: aCheckable in: aGroup [
-
-	aCheckable isChecked ifTrue: [
-		(aGroup buttons select: [ :b | b ~= aCheckable and: [ b checked ] ])
-			do: [ :b | b privateChecked: false ] ].
-	super onButtonAdded: aCheckable in: aGroup
 ]
 
 { #category : #notifications }

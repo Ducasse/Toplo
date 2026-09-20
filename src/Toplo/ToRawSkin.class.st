@@ -1,6 +1,6 @@
 Class {
 	#name : #ToRawSkin,
-	#superclass : #ToBasicSkin,
+	#superclass : #ToGeneralSkin,
 	#category : #'Toplo-Core-Skin'
 }
 
@@ -9,7 +9,6 @@ ToRawSkin >> onInstalledIn: anElement [
 
 	super onInstalledIn: anElement.
 	anElement installRawStyle
-
 ]
 
 { #category : #'api - hooks' }

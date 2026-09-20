@@ -2,98 +2,438 @@ Class {
 	#name : #ToPopupWindowManager,
 	#superclass : #ToAnchoredWindowManager,
 	#instVars : [
-		'autoCloseOnMouseUpDelay',
-		'autoClosePickOutsideEventClass',
-		'mouseButton'
+		'mouseButton',
+		'popupDelay',
+		'autoCloseDelay',
+		'delayedPopupHandler',
+		'popupOnPressed',
+		'closeOnLeaved',
+		'closeOnReleased',
+		'checkOutsideEvent',
+		'outsideEventFilter',
+		'popover'
 	],
 	#category : #'Toplo-Core-Window'
 }
 
 { #category : #accessing }
-ToPopupWindowManager >> autoCloseOnMouseUpDelay [
+ToPopupWindowManager >> autoCloseDelay [
+	" a minimal delay between the opening (on mouse down as an example) 
+	and a close request of the window (on mouse up as an example).
+	used to not close a window immediately after its opening (menu).
+	nil means no autoclosing.
+	"
 
-	^ autoCloseOnMouseUpDelay
+	^ autoCloseDelay ifNil: [ autoCloseDelay:= self defaultAutoCloseDelay ]
 ]
 
 { #category : #accessing }
-ToPopupWindowManager >> autoCloseOnMouseUpDelay: aDelay [
+ToPopupWindowManager >> autoCloseDelay: aDelay [
+	" a minimal delay between the opening (on mouse down as an example) 
+	and a close request of the window (on mouse up as an example).
+	used to not close a window immediately after its opening (menu).
+	nil means no autoclosing.
+	"
 
-	autoCloseOnMouseUpDelay := aDelay ifNotNil: [:d| d asDuration ]
+	autoCloseDelay := aDelay ifNotNil: [ :d | d asDuration ]
+]
+
+{ #category : #'window handling' }
+ToPopupWindowManager >> canCloseWindowAfter: aTimestamp [
+
+	| delay |
+
+	aTimestamp ifNil: [ ^ true ].
+	currentWindow ifNil: [ ^ true ].	
+	currentWindow popupTimestamp ifNil: [ ^ true ].	
+	autoCloseDelay ifNil: [ ^ true ].
+
+	delay := aTimestamp - currentWindow popupTimestamp.
+	delay >= autoCloseDelay ifFalse: [ ^ false ].
+
+	^ true
 ]
 
 { #category : #accessing }
-ToPopupWindowManager >> autoClosePickOutsideEventClass [
+ToPopupWindowManager >> checkOutsideEvent: aBoolean [
 
-	^ autoClosePickOutsideEventClass
+	checkOutsideEvent := aBoolean
 ]
 
 { #category : #accessing }
-ToPopupWindowManager >> autoClosePickOutsideEventClass: anEventClass [
+ToPopupWindowManager >> checkPickOutside: aBoolean [
 
-	autoClosePickOutsideEventClass := anEventClass
+	self
+		deprecated: 'Use #checkOutsideEvent instead'
+		transformWith:
+		'`@rcvr checkPickOutside: `@arg'
+		-> '`@rcvr checkOutsideEvent: `@arg'.
+
+	self checkOutsideEvent: aBoolean
+]
+
+{ #category : #accessing }
+ToPopupWindowManager >> closeOnLeaved: aBoolean [
+
+	closeOnLeaved := aBoolean 
+]
+
+{ #category : #accessing }
+ToPopupWindowManager >> closeOnReleased: aBoolean [
+
+	closeOnReleased := aBoolean 
+]
+
+{ #category : #'window handling' }
+ToPopupWindowManager >> closeWindowIfMinimumDelayExceededOnEvent: anEvent [
+
+	currentWindow ifNil: [ ^ self ].
+	anEvent ifNotNil: [
+			(self isMinimumDelayBeforeClosingExceededOnEvent: anEvent) ifFalse: [
+					self resetPopupHandlerOnEvent: anEvent.
+					^ self ] ].
+	self closeWindowNowOnEvent: anEvent
+]
+
+{ #category : #'window handling' }
+ToPopupWindowManager >> closeWindowNowOnEvent: anEvent [
+
+	currentWindow ifNil: [ ^ self ].
+	anEvent ifNotNil: [
+		self consumeEventAfterForcedClosing ifTrue: [ anEvent consume ] ].
+	self closeWindowOnEvent: anEvent
+]
+
+{ #category : #'event handling' }
+ToPopupWindowManager >> closeWindowOnOutsideEvent: anEvent [
+
+	self closeWindowIfMinimumDelayExceededOnEvent: anEvent
+]
+
+{ #category : #'event handling' }
+ToPopupWindowManager >> consumeEventAfterForcedClosing [
+
+	^ true
 ]
 
 { #category : #initialization }
-ToPopupWindowManager >> defaultAutoCloseOnMouseUpDelay [
+ToPopupWindowManager >> defaultAutoCloseDelay [
+	" automatically close the window if the delay between the popup 
+	and an event (mouse-up) is greater than this delay"
 
 	^ 300 milliSeconds
 ]
 
 { #category : #initialization }
-ToPopupWindowManager >> defaultAutoClosePickOutsideEventClass [
+ToPopupWindowManager >> defaultPlacement [
 
-	^ BlMouseUpOutsideEvent
+	^ ToAnchoredBottomCenterPlacement new
 ]
 
 { #category : #initialization }
-ToPopupWindowManager >> defaultPositionHook [
+ToPopupWindowManager >> defaultPopupDelay [
+	" popup the window after this delay "
 
-	^ [ :window :theElement :event |
-	  window position: (theElement bounds inParent: self anchorRoot) bounds bottomLeft ]
+	^ 0 milliSeconds
 ]
 
-{ #category : #accessing }
-ToPopupWindowManager >> elementEventHandlerClass [ 
+{ #category : #initialization }
+ToPopupWindowManager >> defaultWindowStarter [
 
-	^ ToElementWithPopupEventHandler
+	^ ToStandardPopupStarter new
+]
+
+{ #category : #'api - accessing' }
+ToPopupWindowManager >> eventsToHandle [
+
+	^ super eventsToHandle , {
+		  ToMouseUpOutsideEvent.
+		  ToMouseOutsideEvent.
+		  ToStartStillHoveredEvent.
+		  ToStopStillHoveredEvent.
+		  ToStartStillPressedEvent.
+		  ToStopStillPressedEvent.
+		  BlMouseUpEvent.
+		  BlMouseDownEvent.
+		  BlMouseEnterEvent.
+		  BlMouseLeaveEvent }
 ]
 
 { #category : #initialization }
 ToPopupWindowManager >> initialize [ 
 
 	super initialize.
-	self usePrimaryMouseButton .
-	self autoClosePickOutsideEventClass: self defaultAutoClosePickOutsideEventClass.
- 	autoCloseOnMouseUpDelay := self defaultAutoCloseOnMouseUpDelay 
+	self usePrimaryMouseButton.
+ 	autoCloseDelay := self defaultAutoCloseDelay.
+	checkOutsideEvent := true.
+	popupDelay := self defaultPopupDelay.
+	closeOnReleased := true.
+	closeOnLeaved := false.
+	popupOnPressed := true.
+	popover := false
+
+]
+
+{ #category : #'api - hooks' }
+ToPopupWindowManager >> installDelayedPopupHandler [
+
+	delayedPopupHandler ifNotNil: [ ^ self ].
+	delayedPopupHandler := self newDelayedPopupHandler.
+	delayedPopupHandler startDelay: self popupDelay.
+	delayedPopupHandler activateOnPressed: popupOnPressed.
+	delayedPopupHandler activateOnHovered: popover.
+	delayedPopupHandler standaloneMouseOutsideFilter: false.
+	anchorElement addEventHandler: delayedPopupHandler
+]
+
+{ #category : #'api - hooks' }
+ToPopupWindowManager >> installOutsideEventFilter [
+
+	outsideEventFilter ifNotNil: [ ^ self ].
+	outsideEventFilter := self newOutsideEventFilter.
+	anchorElement space root addEventFilter: outsideEventFilter
+]
+
+{ #category : #accessing }
+ToPopupWindowManager >> isPopover [
+
+	^ popover
 ]
 
 { #category : #'mouse handlers' }
-ToPopupWindowManager >> mouseDownInElementEvent: anEvent [
+ToPopupWindowManager >> mouseDownEvent: anEvent [
+	" first I have to test if I'am concerned by this event "
 
-	builder ifNil: [ ^ self ].
+	popupOnPressed ifFalse: [ ^ self ].
 	anEvent button = mouseButton ifFalse: [ ^ self ].
-	currentWindow ifNotNil: [
-		currentWindow isOpened ifTrue: [ currentWindow close ].
-		^ self ].
-	self newWindowEvent: anEvent.
-	element enqueueTask:
-		(BlTaskAction new action: [ currentWindow popupEvent: anEvent ])
+	currentWindow ifNotNil: [ " use case: the mouse is on a menu button and the menu window is opened. 
+		clicking on this menu button must close the button and cancel the pane auto open"
+			anchorElement menuPaneDo: [ :mp | mp stopAutoOpen ].
+			^ self ].
+	self popupEvent: anEvent
 ]
 
-{ #category : #'mouse handlers' }
-ToPopupWindowManager >> mouseUpInElementEvent: anEvent [
+{ #category : #'event handling' }
+ToPopupWindowManager >> mouseEnterEvent: anEvent [
 
-	| delay maxDelay |
+
+]
+
+{ #category : #'event handling' }
+ToPopupWindowManager >> mouseLeaveEvent: anEvent [
+
+	closeOnLeaved ifFalse: [ ^ self ].
+	self closeWindowIfMinimumDelayExceededOnEvent: anEvent
+]
+
+{ #category : #'event handling' }
+ToPopupWindowManager >> mouseOutsideEvent: anEvent [
+
+	self flag: 'Check how to refactor together with #mouseUpOutsideEvent: '. 
+	anEvent emitter = outsideEventFilter ifFalse: [ ^ self ].
+	checkOutsideEvent ifFalse: [ ^ self ].
+	popover ifFalse: [ closeOnLeaved ifFalse: [ ^ self ] ].
+	anEvent sourceEvent consume.
+	self onOutsideEvent: anEvent
+]
+
+{ #category : #'event handling' }
+ToPopupWindowManager >> mouseUpEvent: anEvent [
+
+	closeOnReleased ifFalse: [ ^ self ].
+	self closeWindowIfMinimumDelayExceededOnEvent: anEvent
+]
+
+{ #category : #'event handling' }
+ToPopupWindowManager >> mouseUpOutsideEvent: anEvent [
+
+	self flag: 'Check how to refactor together with #mouseOutsideEvent: '. 
+	anEvent emitter = outsideEventFilter ifFalse: [ ^ self ].
+	checkOutsideEvent ifFalse: [ ^ self ].
+	anEvent sourceEvent consume.
+	self onOutsideEvent: anEvent
+]
+
+{ #category : #'api - hooks' }
+ToPopupWindowManager >> newDelayedPopupHandler [
+	
+	^ ToMixedEventGeneratorHandler new
+]
+
+{ #category : #'api - hooks' }
+ToPopupWindowManager >> newOutsideEventFilter [
+
+	^ ToOutsideEventFilter new
+		  eventsToHandle: (popover
+				   ifTrue: [
+						   {
+							   BlMouseOverEvent.
+							   BlMouseUpEvent } ]
+				   ifFalse: [ { BlMouseUpEvent } ]);
+		  element: anchorElement;
+		  yourself
+]
+
+{ #category : #'api - hooks' }
+ToPopupWindowManager >> onInstalledIn: anElement [
+
+	super onInstalledIn: anElement.
+	self installDelayedPopupHandler
+]
+
+{ #category : #'event handling' }
+ToPopupWindowManager >> onOutsideEvent: anEvent [
+
+	anEvent emitter = outsideEventFilter ifFalse: [ ^ self ].
+	self closeWindowOnOutsideEvent: anEvent
+]
+
+{ #category : #'api - hooks' }
+ToPopupWindowManager >> onUninstalledIn: anElement [
+
+	self uninstallDelayedPopupHandler.
+	super onUninstalledIn: anElement.
+]
+
+{ #category : #'window handling' }
+ToPopupWindowManager >> onWindowClosedOnEvent: anEvent [
+
+	super onWindowClosedOnEvent: anEvent.
+	self resetPopupHandlerOnEvent: anEvent.
+	self uninstallOutsideEventFilter
+]
+
+{ #category : #'window handling' }
+ToPopupWindowManager >> onWindowOpenedOnEvent: anEvent [
+
+	super onWindowOpenedOnEvent: anEvent.
+	self installOutsideEventFilter
+]
+
+{ #category : #accessing }
+ToPopupWindowManager >> popover: aBoolean [
+
+	popover := aBoolean.
+	delayedPopupHandler activateOnHovered: popover.
+]
+
+{ #category : #'window handling' }
+ToPopupWindowManager >> popup [
+
+	self popupEvent: nil
+]
+
+{ #category : #accessing }
+ToPopupWindowManager >> popupDelay [
+
+	^ popupDelay
+]
+
+{ #category : #accessing }
+ToPopupWindowManager >> popupDelay: aDuration [
+
+	popupDelay := aDuration.
+	delayedPopupHandler startDelay: self popupDelay.
+]
+
+{ #category : #'window handling' }
+ToPopupWindowManager >> popupEvent: anEvent [
+
+	currentWindow ifNotNil: [ ^ self ].
+	anchorElement isEnabled ifFalse: [ ^ self ].
+	" in case the anchor element is part of an infinite list node, 
+	one have to check if it is still in space"
+	anchorElement isAttachedToSceneGraph ifFalse: [ ^ self ].
+	self createNewWindowOnEvent: anEvent.
+	currentWindow popupEvent: anEvent.
+	anEvent ifNotNil: [ :evt | evt consume ]
+]
+
+{ #category : #accessing }
+ToPopupWindowManager >> popupOnPressed: aBoolean [
+	" useful for tablet UI "
+
+	popupOnPressed := aBoolean.
+	delayedPopupHandler activateOnPressed: popupOnPressed
+]
+
+{ #category : #'event handling' }
+ToPopupWindowManager >> removedFromSpaceEvent: anEvent [
+
+	super removedFromSpaceEvent: anEvent.
+	delayedPopupHandler cleanUpCheckerIn: anchorElement 
+]
+
+{ #category : #'window handling' }
+ToPopupWindowManager >> requestCloseWindowOnEvent: anEvent [
+
 	currentWindow ifNil: [ ^ self ].
-	currentWindow popupTimestamp ifNil: [ ^ self ].
-	maxDelay := self autoCloseOnMouseUpDelay.
-	" maxDelay if nil -> no auto closing here "
-	maxDelay ifNil: [ ^ self ].
-	" check a minimal delay between opening and closing.
-		The mouse up can occur immediately after the window opening -> don't close the popup window.
-		After a given delay between down and up, the popup window is closed "
-	delay := anEvent timestamp - currentWindow popupTimestamp.
-	delay > maxDelay ifTrue: [ currentWindow close ]
+	(self canCloseWindowAfter: anEvent timestamp) ifFalse: [ ^ self ].
+	self closeWindowIfMinimumDelayExceededOnEvent: anEvent
+]
+
+{ #category : #'window handling' }
+ToPopupWindowManager >> resetPopupHandlerOnEvent: anEvent [
+
+	delayedPopupHandler resetTaskFromEvent: anEvent in: anchorElement
+]
+
+{ #category : #'event handling' }
+ToPopupWindowManager >> startStillHoveredEvent: anEvent [
+	" first I have to test if I'am concerned by this event "
+
+	anEvent emitter = delayedPopupHandler ifFalse: [ ^ self ].
+	self popupEvent: anEvent sourceEvent
+]
+
+{ #category : #'event handling' }
+ToPopupWindowManager >> startStillPressedEvent: anEvent [
+	" first I have to test if I'am concerned by this event "
+
+	anEvent emitter = delayedPopupHandler ifFalse: [ ^ self ].
+	anEvent sourceEvent button = mouseButton ifFalse: [ ^ self ].
+	currentWindow ifNotNil: [ " use case: the mouse is on a menu button and the menu window is opened. 
+		clicking on this menu button must close the button and cancel the pane auto open"
+			anchorElement menuPaneDo: [ :mp | mp stopAutoOpen ].
+			^ self ].
+	self popupEvent: anEvent sourceEvent
+]
+
+{ #category : #'event handling' }
+ToPopupWindowManager >> stopStillHoveredEvent: anEvent [
+
+	closeOnLeaved ifFalse: [ ^ self ].
+	self requestCloseWindowOnEvent: anEvent sourceEvent
+]
+
+{ #category : #'event handling' }
+ToPopupWindowManager >> stopStillPressedEvent: anEvent [
+
+	closeOnReleased ifFalse: [ ^ self ].
+	self requestCloseWindowOnEvent: anEvent sourceEvent
+]
+
+{ #category : #'api - hooks' }
+ToPopupWindowManager >> uninstallDelayedPopupHandler [
+
+	delayedPopupHandler ifNil: [ ^ self ].
+	anchorElement removeEventHandler: delayedPopupHandler.
+	delayedPopupHandler := nil
+]
+
+{ #category : #'api - hooks' }
+ToPopupWindowManager >> uninstallOutsideEventFilter [
+
+	outsideEventFilter ifNil: [ ^ self ].
+	anchorElement isAttachedToSceneGraph ifTrue: [
+		anchorElement space root removeEventFilter: outsideEventFilter ].
+	outsideEventFilter := nil
+]
+
+{ #category : #initialization }
+ToPopupWindowManager >> useNoMouseButton [
+
+	mouseButton := nil
 ]
 
 { #category : #initialization }
@@ -108,14 +448,8 @@ ToPopupWindowManager >> useSecondaryMouseButton [
 	mouseButton := BlMouseButton secondary
 ]
 
-{ #category : #accessing }
-ToPopupWindowManager >> windowClosedEventClass [
+{ #category : #initialization }
+ToPopupWindowManager >> windowStarter [
 
-	^ ToPopupWindowClosedEvent
-]
-
-{ #category : #accessing }
-ToPopupWindowManager >> windowOpenedEventClass [
-
-	^ ToPopupWindowOpenedEvent
+	^ ToStandardPopupStarter new
 ]

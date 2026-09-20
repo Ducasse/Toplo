@@ -1,6 +1,8 @@
 Class {
 	#name : #ToTheme,
 	#superclass : #Object,
+	#traits : 'TToStyleSheetTheme + TToStyleRuleScripter + TToStyleRulesHolder',
+	#classTraits : 'TToStyleSheetTheme classTrait + TToStyleRuleScripter classTrait + TToStyleRulesHolder classTrait',
 	#instVars : [
 		'icons',
 		'tokenProperties'
@@ -15,23 +17,89 @@ ToTheme class >> canBeDefault [
 ]
 
 { #category : #accessing }
-ToTheme class >> defaultCheckboxBlankImage [
+ToTheme class >> darkStyleTable [
 
-	| bar im |
-	bar := BlElement new id: #'indeterminate-bar'.
-	bar constraintsDo: [ :c |
-		c horizontal matchParent.
-		c vertical exact: 3.
-		c frame horizontal alignCenter.
-		c frame vertical alignCenter ].
-	bar margin: (BlInsets left: 2 right: 2).
-	bar geometry: (BlRoundedRectangleGeometry cornerRadius: 2).
-	im := BlElement new id: #'icon-image'.
-	im layout: BlFrameLayout new.
-	im size: 14 asPoint.
-	im addChild: bar.
-	im addAllStamps: #( #'inner-image' #unchecked ).
-	^ im
+			"(symbol color [emphasisSymbolOrArray [textStyleName [pixelHeight]]])"
+ ^ #(
+			(default 								white)
+			(invalid 								'FF8A80') 
+
+			(comment 								'7D8C93')
+
+			(character 							('E38C1E' lighter))
+			(number 								('FFE54B'))
+			(symbol 								('E38C1E'))
+			(string 								('E38C1E'))
+
+			(selector 								white)
+
+			(#true 								('00CC6E' darker))
+			(#false 								('00CC6E' darker))
+			(#nil 									('00CC6E' darker))
+
+			(#self 								'00CC6E')
+			(#super								'00CC6E')
+			(#thisContext 						'00CC6E')
+			(#return 								'00CC6E' bold)
+
+			(patternArg 							'03a9f4' bold)
+			(argument 							'03a9f4')
+										
+			(instVar 								'ffa000')										
+
+			(patternTempVar 					'00acc1')
+			(tempVar 								'00acc1')
+																					
+			(blockPatternArg 					'0091ea' italic)
+			(blockArg 							'0091ea' italic)
+
+			(blockPatternTempVar 				'00838f' italic)
+			(blockTempVar 						'00838f' italic)
+
+			(poolConstant 						'A7E2ED' bold)
+			(classVar 							'A7E2ED' bold)
+			(globalVar 							white bold)
+
+
+			(incompleteIdentifier 			'E8E2B7' italic)
+			(incompleteSelector				'E8E2B7' italic)
+
+			(undefinedIdentifier 				'FF8A80')
+			(undefinedSelector 					'FF8A80')
+
+			(patternSelector 						white bold)
+			(blockArgColon 						white)
+			(parenthesis 					white)
+			(parenthesis1 					(green muchLighter))
+			(parenthesis2 					(magenta muchLighter))
+			(parenthesis3 					('FF8A80' muchLighter))
+			(parenthesis4 					(green lighter))
+			(parenthesis5 					(orange lighter))
+			(parenthesis6 					(magenta lighter))
+			(parenthesis7 					blue)
+			(block 							white)
+			(block1 						(green muchLighter))
+			(block2 						(magenta muchLighter))
+			(block3 						(red muchLighter))
+			(block4 						(green lighter))
+			(block5 						(orange lighter))
+			(block6 						(magenta lighter))
+			(block7 						blue)
+			(brace 							white)
+			(cascadeSeparator 					white bold)
+			(statementSeparator 				white bold)
+			(methodTempBar 						white)
+			(blockTempBar 						white)
+			(blockArgsBar 						white)
+
+			
+			(pragma 									'B4DD6E'))
+]
+
+{ #category : #accessing }
+ToTheme class >> defaultCheckboxHeight [
+
+	^ 18
 ]
 
 { #category : #accessing }
@@ -41,24 +109,78 @@ ToTheme class >> defaultColorPrimary [
 ]
 
 { #category : #accessing }
+ToTheme class >> defaultSwitchIconHeight [
+
+	^ 16
+]
+
+{ #category : #accessing }
 ToTheme class >> defaultTokenProperties [
 	" skin managing need a list of unique stamps . "
 
 	^ {
+		  (ToTokenProperty
+			   name: #'sh-style-table'
+			   value: self lightStyleTable ).
 		  (ToTokenProperty name: #'background-color' value: Color white).
+		  (ToTokenProperty
+			   name: #empty_box
+			   value: (ToMiscellaneousIcons innerImageNamed: 'filled_emptyBox')).
+		  (ToTokenProperty
+			   name: #check
+			   value:
+			   (ToMaterialDesignIconProvider innerImageNamed: 'outlined_check')).
 
-		  (ToTokenProperty name: #'border-radius' value: 6).
+		  (ToTokenProperty
+			   name: #'iconic-arrow-right'
+			   value: (ToMaterialDesignIconProvider innerImageNamed:
+					    'outlined_keyboardarrowright')).
+		  (ToTokenProperty
+			   name: #'iconic-arrow-left'
+			   value: (ToMaterialDesignIconProvider innerImageNamed:
+					    'outlined_keyboardarrowleft')).
+		  (ToTokenProperty
+			   name: #'iconic-arrow-down'
+			   value: (ToMaterialDesignIconProvider innerImageNamed:
+					    'outlined_keyboardarrowdown')).
+		  (ToTokenProperty
+			   name: #'iconic-arrow-up'
+			   value: (ToMaterialDesignIconProvider innerImageNamed:
+					    'outlined_keyboardarrowup')).
+
+		  (ToTokenProperty name: #'iconic-arrow-breadth' value: 18).
+		  (ToTokenProperty name: #'node-indent' value: 18).
+		  (ToTokenProperty name: #'node-interspace' value: 6).
+		  (ToTokenProperty name: #'border-radius' value: 4).
 		  (ToTokenProperty name: #'border-radius-LG' value: 8).
 		  (ToTokenProperty name: #'border-radius-SM' value: 4).
 
 		  (ToTokenProperty
-			   name: #'animation-window-opening'
+			   name: #'window-opening-animation'
 			   value: [ :win |
-				   win opacity: 0.1.
-				   win addAnimation:
-					   ((BlOpacityAnimation new opacity: 1.9) duration:
-						    900 milliSeconds) ]).
+					   win opacity: 0.0.
+					   win addAnimation:
+						   ((BlOpacityAnimation new opacity: 1.0) duration:
+							    400 milliSeconds) ]).
 
+		  (ToTokenProperty
+			   name: #'window-closing-animation'
+			   value: [ :win |
+					   | s |
+					   win opacity: 0.8.
+					   s := win constraints vertical resizer size.
+					   win addAnimation: (BlNumberTransition new
+							    duration: 100 milliSeconds;
+							    from: s;
+							    to: s / 4;
+							    onStepDo: [ :number :anElement |
+									    anElement height: number.
+									    anElement opacity: anElement opacity - 0.05 ];
+							    onFinishedDo: [
+									    win spaceDo: [ :sp |
+												    win removeFromParent.
+												    sp mouseProcessor handleLastMouseMove ] ];
+							    yourself) ]).
 		  (ToTokenProperty
 			   name: #'effect-window'
 			   value: (BlGaussianShadowEffect
@@ -94,7 +216,7 @@ ToTheme class >> defaultTokenProperties [
 			   value: Color transparent).
 		  (ToTokenProperty
 			   name: #'color-border-disabled'
-			   value: (Color black alpha: 0.2)).
+			   value: (Color veryLightGray alpha: 0.2)).
 		  (ToTokenProperty
 			   name: #'color-border-indeterminate'
 			   value: self defaultColorPrimary lighter).
@@ -147,7 +269,7 @@ ToTheme class >> defaultTokenProperties [
 			   value: (self defaultColorPrimary alpha: 0.5)).
 		  (ToTokenProperty
 			   name: #'color-primary-hover'
-			   value: self defaultColorPrimary lighter lighter).
+			   value: (self defaultColorPrimary alpha: 0.1)).
 
 		  (ToTokenProperty
 			   name: #'color-success'
@@ -158,11 +280,14 @@ ToTheme class >> defaultTokenProperties [
 
 		  (ToTokenProperty name: #'color-text' value: Color black).
 		  (ToTokenProperty
+			   name: #'color-text-placeholder'
+			   value: Color lightGray).
+		  (ToTokenProperty
 			   name: #'color-text-description'
 			   value: (Color black alpha: 0.45)).
 		  (ToTokenProperty
 			   name: #'color-text-disabled'
-			   value: Color lightGray).
+			   value: (Color lightGray alpha: 0.6)).
 		  (ToTokenProperty
 			   name: #'color-text-heading'
 			   value: (Color black alpha: 0.88)).
@@ -173,14 +298,11 @@ ToTheme class >> defaultTokenProperties [
 			   name: #'color-text-secondary'
 			   value: (Color black alpha: 0.45)).
 		  (ToTokenProperty
-			   name: #'label-selected-focused'
+			   name: #'selected-focused-foreground'
 			   value: Color white).
 		  (ToTokenProperty
-			   name: #'label-selected-unfocused'
+			   name: #'selected-unfocused-foreground'
 			   value: self defaultColorPrimary).
-		  (ToTokenProperty
-			   name: #'label-foreground-deselected'
-			   value: Color black).
 		  (ToTokenProperty
 			   name: #'text-foreground-in-tooltip'
 			   value: (Color fromHexString: '#313339')).
@@ -188,8 +310,13 @@ ToTheme class >> defaultTokenProperties [
 		  (ToTokenProperty name: #'dash-array' value: #( 3 3 )).
 
 		  "#( 'SFMono-Regular' , Consolas , 'Liberation Mono', Menlo , Courier , monospace )"
-		  (ToTokenProperty name: #'font-family-code' value: 'Courier').
+		  (ToTokenProperty
+			   name: #'font-name'
+			   value: AeFontManager defaultFontFamilyName).
 		  (ToTokenProperty name: #'font-size' value: 14).
+		  (ToTokenProperty
+			   name: #'font-weight-attribute'
+			   value: BlFontWeightAttribute normal).
 		  (ToTokenProperty name: #'font-size-in-tooltip' value: 12).
 		  (ToTokenProperty name: #'font-size-H1' value: 38).
 		  (ToTokenProperty name: #'font-size-H2' value: 30).
@@ -198,7 +325,7 @@ ToTheme class >> defaultTokenProperties [
 		  (ToTokenProperty name: #'font-size-H5' value: 16).
 		  (ToTokenProperty name: #'font-weight-strong' value: 600).
 
-		  (ToTokenProperty name: #'line-height' value: 1.5).
+		  (ToTokenProperty name: #'line-height' value: 1).
 		  (ToTokenProperty name: #'line-height-H1' value: 1.2).
 		  (ToTokenProperty name: #'line-height-H2' value: 1.3).
 		  (ToTokenProperty name: #'line-height-H3' value: 1.3).
@@ -212,7 +339,9 @@ ToTheme class >> defaultTokenProperties [
 			   name: #'focus-border-paint'
 			   value: self defaultColorPrimary).
 		  (ToTokenProperty name: #'border-width' value: 1).
-		  (ToTokenProperty name: #'border-paint' value: Color lightGray).
+		  (ToTokenProperty
+			   name: #'border-paint'
+			   value: (Color veryLightGray alpha: 0.2)).
 
 		  "Size, margin and padding"
 		  (ToTokenProperty name: #'control-height' value: 32).
@@ -221,28 +350,73 @@ ToTheme class >> defaultTokenProperties [
 
 		  (ToTokenProperty name: #'margin-XS' value: 8).
 
-		  (ToTokenProperty name: #'padding-content-H' value: 15).
-		  (ToTokenProperty name: #'padding-content-V' value: 4).
-		  (ToTokenProperty name: #'padding-content-V-S' value: 2).
-		  (ToTokenProperty name: #'padding-content-V-XS' value: 1).
+		  (ToTokenProperty name: #'padding-iconic-button' value: 1).
+		  (ToTokenProperty name: #'padding-content-H' value: 12).
+		  (ToTokenProperty name: #'padding-content-HS' value: 4).
+		  (ToTokenProperty name: #'padding-content-HXS' value: 2).
+		  (ToTokenProperty name: #'padding-content-V' value: 6).
+		  (ToTokenProperty name: #'padding-content-VS' value: 4).
+		  (ToTokenProperty name: #'padding-content-VXS' value: 2).
+		  (ToTokenProperty name: #'padding-S' value: 14).
 		  (ToTokenProperty name: #'padding-XS' value: 8).
+		  (ToTokenProperty name: #'padding-XXS' value: 3).
 
+		  (ToTokenProperty name: #'button-interspace' value: 8).
 		  (ToTokenProperty name: #'list-padding-H' value: 6).
 		  (ToTokenProperty name: #'list-padding-V' value: 6).
-		  (ToTokenProperty name: #'list-node-padding-H' value: 3).
-		  (ToTokenProperty name: #'list-node-padding-V' value: 1).
+		  (ToTokenProperty name: #'list-node-padding-H' value: 4).
+		  (ToTokenProperty name: #'list-node-padding-V' value: 5).
 		  (ToTokenProperty name: #'bar-node-padding-H' value: 3).
-		  (ToTokenProperty name: #'bar-node-padding-V' value: 2).
+		  (ToTokenProperty name: #'bar-node-padding-V' value: 4).
+		  (ToTokenProperty name: #'table-cell-padding-H' value: 6).
+		  (ToTokenProperty name: #'table-cell-padding-V' value: 6).
+		  (ToTokenProperty name: #'table-header-cell-padding-V' value: 10).
+		  (ToTokenProperty name: #'menu-node-padding-H' value: 6).
+		  (ToTokenProperty name: #'menu-node-padding-V' value: 6).
+		  (ToTokenProperty name: #'menu-item-padding-H' value: 6).
+		  (ToTokenProperty name: #'menu-item-padding-V' value: 4).
+		  (ToTokenProperty name: #'menu-window-padding-H' value: 14).
+		  (ToTokenProperty name: #'menu-window-padding-V' value: 14).
 		  (ToTokenProperty name: #'segmented-node-padding-H' value: 0).
 		  (ToTokenProperty name: #'segmented-node-padding-V' value: 0).
 		  (ToTokenProperty name: #'segmented-border-radius' value: 12).
+		  (ToTokenProperty
+			   name: #'segmented-background'
+			   value: (Color veryLightGray alpha: 0.06)).
 
+
+		  (ToTokenProperty
+			   name: #'text-editor-background-disabled'
+			   value: (Color black alpha: 0.1)).
 		  (ToTokenProperty name: #'text-editor-padding-H' value: 3).
 		  (ToTokenProperty name: #'text-editor-padding-V' value: 2).
-		  (ToTokenProperty name: #'menu-item-start-alignment' value: 25).
+		  (ToTokenProperty name: #'menu-item-start-alignment' value: 28).
+		  (ToTokenProperty name: #'menu-item-end-interspace' value: 15).
+		  (ToTokenProperty name: #'inline-item-gap' value: 7).
 		  (ToTokenProperty
-			   name: #'checkbox-image-builder'
-			   value: [ self defaultCheckboxBlankImage ]).
+			   name: #'checkbox-color'
+			   value: self defaultColorPrimary).
+		  (ToTokenProperty
+			   name: #'checkbox-checked-image'
+			   value:
+			   (ToMaterialDesignIconProvider innerImageNamed:
+				    'outlined_checkbox')).
+		  (ToTokenProperty
+			   name: #'checkbox-unchecked-image'
+			   value: (ToMaterialDesignIconProvider innerImageNamed:
+					    'outlined_checkboxoutlineblank')).
+		  (ToTokenProperty
+			   name: #'checkbox-indeterminate-image'
+			   value: (ToMaterialDesignIconProvider innerImageNamed:
+					    'outlined_indeterminatecheckbox')).
+		  (ToTokenProperty
+			   name: #'radio-checked-image'
+			   value: (ToMaterialDesignIconProvider innerImageNamed:
+					    'outlined_radiobuttonchecked')).
+		  (ToTokenProperty
+			   name: #'radio-unchecked-image'
+			   value: (ToMaterialDesignIconProvider innerImageNamed:
+					    'outlined_radiobuttonunchecked')).
 		  (ToTokenProperty
 			   name: #'switch-checked-background'
 			   value: self defaultColorPrimary).
@@ -258,19 +432,49 @@ ToTheme class >> defaultTokenProperties [
 		  (ToTokenProperty
 			   name: #'switch-handle-enabled-background'
 			   value: Color white).
+		  (ToTokenProperty
+			   name: #'switch-icon-size'
+			   value: 24 @ self defaultSwitchIconHeight).
+		  (ToTokenProperty
+			   name: #'checkable-icon-size'
+			   value: self defaultCheckboxHeight asPoint).
+		  (ToTokenProperty
+			   name: #'menu-icon-size'
+			   value: self defaultCheckboxHeight asPoint).
+		  (ToTokenProperty
+			   name: #'color-list-primary-selection-focused'
+			   value: self defaultColorPrimary).
+		  (ToTokenProperty
+			   name: #'color-list-primary-selection-over-focused'
+			   value: (self defaultColorPrimary alpha: 0.3)).
+		  (ToTokenProperty
+			   name: #'color-list-primary-selection-unfocused'
+			   value: (self defaultColorPrimary alpha: 0.2)).
+		  (ToTokenProperty
+			   name: #'color-list-primary-selection-over-unfocused'
+			   value: (self defaultColorPrimary alpha: 0.1)).
 
 		  (ToTokenProperty
 			   name: #'color-primary-selection-focused'
-			   value: (self defaultColorPrimary alpha: 0.6)).
+			   value: (self defaultColorPrimary alpha: 0.3)).
 		  (ToTokenProperty
 			   name: #'color-primary-selection-over-focused'
 			   value: (self defaultColorPrimary alpha: 0.1)).
 		  (ToTokenProperty
 			   name: #'color-primary-selection-unfocused'
-			   value: (self defaultColorPrimary alpha: 0.1)).
+			   value: (self defaultColorPrimary lighter alpha: 0.1)).
 		  (ToTokenProperty
 			   name: #'color-primary-selection-over-unfocused'
 			   value: (self defaultColorPrimary alpha: 0.05)).
+		  (ToTokenProperty
+			   name: #'color-primary-selection-disabled'
+			   value: (Color gray alpha: 0.3)).
+		  (ToTokenProperty
+			   name: #'color-secondary-selection'
+			   value: (Color gray alpha: 0.1)).
+		  (ToTokenProperty
+			   name: #'tab-color-secondary-selection'
+			   value: (Color gray alpha: 0.5)).
 
 		  (ToTokenProperty name: #'border-width-primary-selection' value: 1).
 		  (ToTokenProperty
@@ -278,10 +482,17 @@ ToTheme class >> defaultTokenProperties [
 			   value: Color red).
 		  (ToTokenProperty
 			   name: #'border-color-primary-selection'
-			   value: self defaultColorPrimary).
+			   value: self defaultColorPrimary darker).
 		  (ToTokenProperty
 			   name: #'list-context-menu-selection-border-gap'
-			   value: 1.0) }
+			   value: 1.0).
+		  (ToTokenProperty
+			   name: #'divider-hovered-background'
+			   value: (Color veryLightGray alpha: 0.3)).
+		  (ToTokenProperty
+			   name: #'divider-pressed-background'
+			   value: (Color veryLightGray alpha: 0.6)).
+		  (ToTokenProperty name: #'divider-image-size' value: 30) }
 ]
 
 { #category : #accessing }
@@ -291,15 +502,95 @@ ToTheme class >> label [
 ]
 
 { #category : #accessing }
-ToTheme class >> technicalTokenProperties [
-	" toplo need a list of unique stamps for widget technical parameters. "
+ToTheme class >> lightStyleTable [
+	"color can be a valid argument to Color class>>colorFrom: , or nil to
+	use the editor text color.
+	Multiple emphases can be specified using an array e.g. #(bold italic).
+	If emphasis is not specified, #normal will be used.
+	if pixel height is not specified , then the editor font size will be used.
+	"
 
-	^ {
-		  (ToTokenProperty
-			   name: #'toplo-double-click-delay'
-			   value: 250 milliSeconds).
+			"(symbol color [emphasisSymbolOrArray [textStyleName [pixelHeight]]])"
+ ^ #(
+			(default 								black)
+			(invalid 									red)
 
-		}
+			(comment 								(gray darker))
+
+			(character 								(red muchDarker))
+			(number 								(red muchDarker))
+			(symbol 								(magenta muchDarker))
+			(string 									(magenta muchDarker) normal)
+
+			(selector 								(black))
+
+			(#self 									(cyan muchDarker ))
+			(#super 								(cyan muchDarker ))
+			(#true 									(red muchDarker))
+			(#false 									(red muchDarker))
+			(#nil 									(red muchDarker))
+			(#thisContext 							(cyan muchDarker ))
+			(#thisProcess 							(cyan muchDarker ))
+			(#return 								(cyan muchDarker ) bold)
+			(patternArg 							(blue muchDarker))
+			(blockPatternArg 						(blue muchDarker))
+			(blockArg 								(blue muchDarker))
+			(argument 								(blue muchDarker))
+			(blockTempVar 						(blue muchDarker))
+			(blockPatternTempVar 					(blue muchDarker))
+			(instVar 								(cyan muchDarker))
+
+			(tempVar 								(blue muchDarker))
+			(patternTempVar 						(blue muchDarker))
+			(poolConstant 							(cyan muchDarker))
+			(classVar 								(cyan muchDarker))
+			(globalVar 								(purple muchDarker))
+
+			(incompleteIdentifier 					blue italic)
+			(incompleteSelector 					nil  italic)
+
+			(undefinedIdentifier 					red)
+			(undefinedSelector 					red)
+
+			(patternSelector 						nil bold)
+			(blockArgColon 						black)
+			(parenthesis 						black)
+			(parenthesis1 						(green muchDarker))
+			(parenthesis2 						(magenta muchDarker))
+			(parenthesis3 						(red muchDarker))
+			(parenthesis4 						(green darker))
+			(parenthesis5 						(orange darker))
+			(parenthesis6 						(magenta darker))
+			(parenthesis7 						blue)
+			(block 								black)
+			(block1 							(green muchDarker))
+			(block2 							(magenta muchDarker))
+			(block3 							(red muchDarker))
+			(block4 							(green darker))
+			(block5 							(orange darker))
+			(block6 							(magenta darker))
+			(block7 							blue)
+			(brace 								black)
+			(brace1 								(green muchDarker))
+			(brace2 								(magenta muchDarker))
+			(brace3 								(red muchDarker))
+			(brace4 								(green darker))
+			(brace5 								(orange darker))
+			(brace6 								(magenta darker))
+			(brace7 								blue)
+			(cascadeSeparator 					black)
+			(statementSeparator 					black)
+			(methodTempBar 						(black))
+			(blockTempBar 						(black))
+			(blockArgsBar 							(black))
+
+			(pragma 						(green muchDarker)))
+]
+
+{ #category : #accessing }
+ToTheme >> addTokenNamed: aSymbol withValue: anObject [
+
+	self addTokenProperty: (aSymbol -> anObject) asTokenProperty 
 ]
 
 { #category : #accessing }
@@ -314,23 +605,16 @@ ToTheme >> addTokenProperty: aTokenProperty [
 	tokenProperties add: aTokenProperty
 ]
 
-{ #category : #accessing }
+{ #category : #'skin creation' }
 ToTheme >> defaultSkinFor: anElement [
 
-	anElement skinManager setUp: anElement forTheme: self.
-	^ self expectedSkinFor: anElement
+	^ anElement defaultSkin ifNil: [ self newSkinFor: anElement ]
 ]
 
 { #category : #accessing }
 ToTheme >> defaultTokenProperties [
 
 	^ self class defaultTokenProperties
-]
-
-{ #category : #accessing }
-ToTheme >> expectedSkinFor: anElement [
-
-	^ anElement skinManager ifNotNil: [:sm | sm defaultSkin ]
 ]
 
 { #category : #accessing }
@@ -346,11 +630,13 @@ ToTheme >> icons: aThemeIcons [
 ]
 
 { #category : #initialization }
-ToTheme >> initialize [ 
+ToTheme >> initialize [
 
 	super initialize.
-	tokenProperties := self technicalTokenProperties asOrderedCollection.
-	tokenProperties addAll: self defaultTokenProperties asOrderedCollection
+	tokenProperties := OrderedCollection new.
+	tokenProperties addAll: self defaultTokenProperties.
+
+	self initializeAsStyleSheetTheme 
 ]
 
 { #category : #accessing }
@@ -359,32 +645,37 @@ ToTheme >> name [
 	^ self class label
 ]
 
-{ #category : #accessing }
+{ #category : #'skin creation' }
 ToTheme >> newSkinFor: anElement [
 
-	anElement ensuredSkinManager setUp: anElement forTheme: self.
-	^ self newSkinInstanceFor: anElement
-]
-
-{ #category : #accessing }
-ToTheme >> newSkinInstanceFor: anElement [
-
-	^ self subclassResponsibility 
+	^ ToGeneralSkin new
 ]
 
 { #category : #'api - hooks' }
 ToTheme >> onInstalledIn: anElement [
 
-	anElement toThemePreInstall: self.
-	anElement addAllTokenProperties: self tokenProperties.
-	anElement toThemeInstalled
+	anElement isSpaceRoot ifTrue: [
+			(Pragma allNamed: #toploThemeInstallerFor:) do: [ :each |
+					| themeClassName themeClass |
+					themeClassName := each arguments first asSymbol.
+					themeClass := self class environment classNamed: themeClassName.
+					(self class = themeClass or: [
+						 self class inheritsFrom: themeClass ]) ifTrue: [
+						each methodClass soleInstance
+							perform: each methodSelector
+							with: self ] ] ].
+				
+	anElement onThemeInstalled: self.
+	anElement isSpaceRoot ifFalse: [ ^ self ].
+	Toplo lastInstalledTheme: self
 ]
 
 { #category : #'api - hooks' }
 ToTheme >> onUninstalledIn: anElement [
 
-	anElement toThemeAboutToBeUninstalled: self.
-	anElement removeAllTokenPropertiesFromNames: (self tokenProperties collect: [:tp | tp name]).
+	anElement removeAllTokenPropertiesFromNames:
+		(self tokenProperties collect: [ :tp | tp name ]).
+	anElement styleSheet: nil.
 	anElement toThemeUninstalled: self
 ]
 
@@ -398,20 +689,10 @@ ToTheme >> printOn: aStream [
 		nextPutAll: ' ]'
 ]
 
-{ #category : #hook }
-ToTheme >> setUpElement: anElement [
-]
+{ #category : #'t - stylesheet scripter' }
+ToTheme >> skinEventListenerHolder [ 
 
-{ #category : #styling }
-ToTheme >> styleSheet [ 
-
-	^ nil
-]
-
-{ #category : #accessing }
-ToTheme >> technicalTokenProperties [
-
-	^ self class technicalTokenProperties
+	^ self styleSheet script
 ]
 
 { #category : #accessing }

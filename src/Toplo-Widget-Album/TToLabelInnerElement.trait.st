@@ -4,18 +4,6 @@ Trait {
 }
 
 { #category : #'t - label inner element' }
-TToLabelInnerElement >> editorShortcutsIn: aLabel [
-
-	^ self explicitRequirement 
-]
-
-{ #category : #'t - label inner element' }
-TToLabelInnerElement >> newEditorIn: aLabel [
-
-	^ self explicitRequirement 
-]
-
-{ #category : #'t - label inner element' }
 TToLabelInnerElement >> text [
 
 	^ self explicitRequirement 

@@ -8,8 +8,30 @@ Class {
 	#category : #'Toplo-Widget-List-Command'
 }
 
+{ #category : #'private - adding' }
+ToElementBasicCommand >> addedIn: aCommandApplier [
+]
+
+{ #category : #application }
+ToElementBasicCommand >> applicationResquestIn: aCommandApplier [
+
+	aCommandApplier applyBasicCommand: self
+]
+
 { #category : #'private - hook' }
 ToElementBasicCommand >> applyWithOperator: anOperator [
 
 	" ask the operator passed as argument to actually apply the command. "
+]
+
+{ #category : #testing }
+ToElementBasicCommand >> isComposite [ 
+
+	^ false
+]
+
+{ #category : #application }
+ToElementBasicCommand >> onAppliedOn: aCommandApplier [
+
+	aCommandApplier onBasicCommandApplied: self
 ]

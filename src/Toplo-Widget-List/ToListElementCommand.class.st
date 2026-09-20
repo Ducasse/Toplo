@@ -7,16 +7,10 @@ Class {
 	#category : #'Toplo-Widget-List-Command'
 }
 
-{ #category : #accessing }
-ToListElementCommand >> indexes [
+{ #category : #'private - adding' }
+ToListElementCommand >> addedIn: aCommandApplier [
 
-	^ self subclassResponsibility 
-]
-
-{ #category : #accessing }
-ToListElementCommand >> intervals [
-
-	^ self subclassResponsibility 
+	selectionModel := aCommandApplier selectionModel
 ]
 
 { #category : #accessing }

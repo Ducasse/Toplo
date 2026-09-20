@@ -1,9 +1,7 @@
 Class {
 	#name : #ToPlaceholderLayer,
 	#superclass : #ToOverlayElement,
-	#traits : 'TToElement + TToEnableable',
-	#classTraits : 'TToElement classTrait + TToEnableable classTrait',
-	#category : #'Toplo-Widget-Pane'
+	#category : #'Toplo-Widget-Pane-Utils'
 }
 
 { #category : #initialization }
@@ -16,8 +14,12 @@ ToPlaceholderLayer >> defaultLayout [
 ToPlaceholderLayer >> initialize [ 
 
 	super initialize.
-	self layout: self defaultLayout.
-	self initializeForToplo 
-
+	self layout: self defaultLayout
 	
+]
+
+{ #category : #skin }
+ToPlaceholderLayer >> newRawSkin [ 
+
+	^ ToPlaceholderLayerSkin new
 ]

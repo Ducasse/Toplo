@@ -3,25 +3,27 @@ A ToThemeManagerTest is a test class for testing the behavior of ToThemeManager
 "
 Class {
 	#name : #ToSkinManagerTest,
-	#superclass : #ToTestCaseWithSpace,
+	#superclass : #ToParameterizedHostTest,
 	#category : #'Toplo-Tests-Core-Theme'
 }
 
 { #category : #tests }
 ToSkinManagerTest >> testApplySkinInstallerIn [
 
-	| e sk |
+	| e sk installedSkinIsThemeSkin newSkinRequested skinInstalledNewSkinRequestedAfter |
 	e := ToElement new.
-	space root addChild: e.
-	e skinManager setDefaultSkin: (sk := ToRawSkin new) in: e.
-	self assert:
-		(e skinManager installedSkin) isNil.
-	self assert: e skinManager installedSkin isNil.
-	self assert: e skinManager hasPostponedInstallSkinHandler not.
-	self assert: e skinManager skinInstaller notNil.
-	e skinManager applySkinInstallerIn: e.
+	space deferAndSettle: [
+		space root addChild: e.
+		e skinManager uninstallSkinIn: e.
+		e defaultSkin: (sk := ToRawSkin new).
+		installedSkinIsThemeSkin := e skinManager installedSkin isThemeSkin.
+		newSkinRequested := e skinManager newSkinRequested.
+		e skinManager installNewSkinIn: e.
+		skinInstalledNewSkinRequestedAfter := e skinManager newSkinRequested ].
+	self assert: installedSkinIsThemeSkin.
+	self deny: newSkinRequested.
 	self assert: e skinManager installedSkin identicalTo: sk.
-	self assert: e skinManager skinInstaller isNil
+	self deny: skinInstalledNewSkinRequestedAfter
 ]
 
 { #category : #tests }
@@ -30,50 +32,25 @@ ToSkinManagerTest >> testApplySkinInstallerIn2 [
 	| e |
 	e := ToElement new.
 	" no skinInstaller -> no installed skin  "
-	e skinManager applySkinInstallerIn: e.
-	self assert: e skinManager installedSkin isNil.
+	e ensuredSkinManager installNewSkinIn: e.
+	self deny: e skinManager installedSkin isThemeSkin.
 	e skinManager requestNewSkinIn: e.
-	self assert: e skinManager hasPostponedInstallSkinHandler
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testApplySkinUninstallerIn [
-
-	| e sk |
-	e := ToElement new. 
-	space root addChild: e.
-	e skinManager setDefaultSkin: (sk := ToRawSkin new) in: e.
-	e skinManager applySkinInstallerIn: e.
-	self assert: e skinManager installedSkin identicalTo: sk.
-	e skinManager requestUninstallSkinIn: e.
-	e skinManager applySkinUninstallerIn: e.
-	self assert: e skinManager installedSkin isNil
-
-	
-
-
+	self assert: e skinManager newSkinRequested
 ]
 
 { #category : #tests }
 ToSkinManagerTest >> testApplyStylesIn [
 
-	| e sk |
+	| e sk nextStatesIsEmpty |
 	e := ToElement new. 
-	space root addChild: e.
-	e skinManager setDefaultSkin: (sk := ToRawSkin new) in: e.
-	e skinManager applySkinInstallerIn: e.
+	space deferAndSettle: [
+		space root addChild: e.
+		e skinManager uninstallSkinIn: e.
+		e defaultSkin: (sk := ToRawSkin new).
+		e skinManager installNewSkinIn: e.
+		nextStatesIsEmpty := e skinManager skinStateQueue nextStates isEmpty ].
 	self assert: e skinManager installedSkin identicalTo: sk.
-	self assert: e skinManager skinStateQueue nextStates isEmpty.
-
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testBorderBuilder [
-
-	| e  |
-	e := ToElement new.
-	e skinManagerDo: [ :skm | skm ensureHaveSkinContext ].
-	self assert: (e skinManager borderBuilder ) notNil
+	self assert: nextStatesIsEmpty
 ]
 
 { #category : #tests }
@@ -90,65 +67,37 @@ ToSkinManagerTest >> testComputedStyleSheetChainIn [
 	" e is not attached -> # ( )"
 	self
 		assert:
-		(childchildchild skinManager computedStyleSheetChainIn: childchildchild)
+		(childchildchild bottomUpStyleSheetChain)
 		equals: #(  ).
-	space := BlSpace new.
-	space root addChild: e.
-	" no styleSheet theme by default "
+	space deferAndSettle: [ space root addChild: e ].
+	" no styleSheet theme by default but any skin has a styleSheet"
 	self assert:
-		(childchildchild skinManager computedStyleSheetChainIn: childchildchild)
-			isEmpty.
-	space toTheme: ToStyleSheetTheme new.
+		(childchildchild bottomUpStyleSheetChain )
+			size equals: 1.
+
+	space deferAndSettle: [ space toTheme: ToStyleSheetTheme new ].
 	" one style sheet in theme by default "
 	self assert:
-		(childchildchild skinManager computedStyleSheetChainIn: childchildchild)
+		(childchildchild bottomUpStyleSheetChain )
 			size equals: 1.
 	childchild styleSheet: ToStyleSheet new.
 	self
 		assert:
-		(childchildchild skinManager computedStyleSheetChainIn: childchildchild)
+		(childchildchild bottomUpStyleSheetChain)
 			size
 		equals: 2.
 	e styleSheet: ToStyleSheet new.
 	self
 		assert:
-		(childchildchild skinManager computedStyleSheetChainIn: childchildchild)
+		(childchildchild bottomUpStyleSheetChain )
 			size
 		equals: 3.
-	childchild skinManager styleSheet inherits: false.
+	childchild styleSheet inherits: false.
 	self
 		assert:
-		(childchildchild skinManager computedStyleSheetChainIn: childchildchild)
+		(childchildchild bottomUpStyleSheetChain )
 			size
 		equals: 1
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testDefaultRawSkin [
-
-	| e sk |
-	e := ToElement new. 
-	e defaultRawSkin: (sk := ToRawSkin new).
-	self assert: e skinManager defaultRawSkin identicalTo: sk
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testDefaultRawSkinIn [
-
-	| e sk |
-	e := ToElement new.
-	space root addChild: e.
-	e skinManager setDefaultRawSkin: (sk := ToRawSkin new) in: e.
-	self assert: (e skinManager skinToInstallIn: e) identicalTo: sk.
-	self assert: e skinManager defaultRawSkin identicalTo: sk.
-	self assert:
-		(e skinManager installedSkin) isNil.
-	self assert: e skinManager installedSkin isNil.
-	self
-		assert:
-			(e eventDispatcher handlers select: [ :h | h isKindOf: ToRawSkin ])
-				size
-		equals: 0
 ]
 
 { #category : #tests }
@@ -156,16 +105,37 @@ ToSkinManagerTest >> testDefaultSkin [
 
 	| e sk |
 	e := ToElement new.
-	space root addChild: e.
+	space deferAndSettle: [ space root addChild: e ].
 	e defaultSkin: (sk := ToRawSkin new).
-	self assert: e skinManager defaultSkin identicalTo: sk.
+	self assert: e defaultSkin identicalTo: sk.
 	self assert: (e skinManager skinToInstallIn: e) identicalTo: sk.
-	self assert: e skinManager installedSkin isNil.
+	self assert: e skinManager installedSkin isThemeSkin.
+
+	space settle.
 	self
 		assert:
 			(e eventDispatcher handlers select: [ :h | h isKindOf: ToRawSkin ])
 				size
-		equals: 0
+		equals: 1
+]
+
+{ #category : #tests }
+ToSkinManagerTest >> testElementRemovedFromSceneGraph [
+	" test that a requestUninstallSkin is sent to an element when it is removed from a space. "
+
+	" this ensures that the skin is removed if the element is added back as a child."
+
+	| e sk |
+	e := ToElement new.
+	space deferAndSettle: [ space root addChild: e ].
+	self assert: e skinManager notNil.
+	e skinManagerDo: [ :sm | sk := sm installedSkin ].
+	self deny: sk isUnknownSkin.
+
+	space deferAndSettle: [
+		space root removeChild: e.
+		space root addChild: e ].
+	e skinManagerDo: [ :sm | self deny: sm installedSkin identicalTo: sk ]
 ]
 
 { #category : #tests }
@@ -174,13 +144,13 @@ ToSkinManagerTest >> testEnqueueSkinStateIn [
 	| w |
 	w := ToElement new.
 	self assert: w skinManager skinStateQueue nextStates size equals: 0.
-	w skinManager skinStateQueue enqueueInstallStateForElement: w.
+	w skinManager skinStateQueue enqueueInstallStateFor: w.
 	" Have a ToInstallState + a ToEnablementState "
 	self assert: w skinManager skinStateQueue nextStates size equals: 2.
 	w skinManager
-		enqueueSkinState:
-		(ToTransientState skinEvent: ToHoveredSkinEvent new)
-		in: w.
+		enqueueTransientState:
+		(ToHoveredSkinEvent new)
+		for: w.
 	self assert: w skinManager skinStateQueue nextStates size equals: 3
 ]
 
@@ -190,23 +160,9 @@ ToSkinManagerTest >> testEnqueueSkinStateInUnauthorized [
 	| w |
 	w := ToElement new.
 	self assert: w skinManager skinStateQueue nextStates size equals: 0.
-	w skinManager
-		enqueueSkinState:
-		(ToTransientState skinEvent: ToHoveredSkinEvent new)
-		in: w.
+	w skinManager enqueueTransientState: ToHoveredSkinEvent new for: w.
 	" a transient state can't be enqueued if an install state has not be enqueued before "
 	self assert: w skinManager skinStateQueue nextStates size equals: 0
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testEnsureHaveSkinContext [
-
-	| e |
-	e := ToElement new.
-	self assert: e skinManager skinContext isNil.
-	e skinManager ensureHaveSkinContext.
-	self assert: e skinManager skinContext notNil.
-
 ]
 
 { #category : #tests }
@@ -214,8 +170,8 @@ ToSkinManagerTest >> testExpectedDefaultSkin [
 
 	| e sk |
 	e := ToElement new. 
-	e defaultRawSkin: (sk := ToRawSkin new).
-	self assert: e skinManager defaultRawSkin identicalTo: sk
+	e defaultSkin: (sk := ToRawSkin new).
+	self assert: e defaultSkin identicalTo: sk
 ]
 
 { #category : #tests }
@@ -223,15 +179,12 @@ ToSkinManagerTest >> testForceDefaultSkinIn [
 
 	| e sk |
 	e := ToElement new.
-	e skinManager setDefaultSkin: (sk := ToRawSkin new) in: e.
-	self assert: e skinManager defaultSkin identicalTo: sk.
+	e defaultSkin: (sk := ToRawSkin new).
+	self assert: e defaultSkin identicalTo: sk.
 	self should: [ e skinManager skinToInstallIn: e ] raise: Error.
-	self assert:
-		(e skinManager installedSkin) isNil.
-	self assert: e skinManager installedSkin isNil.
-	self deny: e skinManager skinUninstaller notNil.
-	self assert: e skinManager hasPostponedInstallSkinHandler.
-	self assert: e skinManager skinInstaller isNil
+	self deny:
+		(e skinManager installedSkin) isThemeSkin.
+	self assert: e skinManager newSkinRequested
 ]
 
 { #category : #tests }
@@ -240,40 +193,12 @@ ToSkinManagerTest >> testForceDefaultSkinInWhenInSpace [
 	| e sk |
 	e := ToElement new.
 	space root addChild: e.
-	e skinManager setDefaultSkin: (sk := ToRawSkin new) in: e.
+	e skinManager uninstallSkinIn: e.
+	e defaultSkin: (sk := ToRawSkin new).
 	self assert: (e skinManager skinToInstallIn: e) identicalTo: sk.
 	self assert: (e skinManager skinToInstallIn: e) identicalTo: sk.
-	self assert: e skinManager installedSkin isNil.
-	self deny: e skinManager skinUninstaller notNil.
-	self assert: e skinManager hasPostponedInstallSkinHandler not.
-	self assert: e skinManager skinInstaller notNil
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testHasPostponedInstallSkinHandler [
-
-	| e handlersNb |
-	e := ToElement new.
-	self assert: e skinManager hasPostponedInstallSkinHandler not.
-	handlersNb := e eventDispatcher handlers size.
-	e skinManager postponeRequestSkinIn: e.
-	self assert: e skinManager hasPostponedInstallSkinHandler.
-	self
-		assert: e eventDispatcher handlers size
-		equals: handlersNb + 1.
-	self assert: e skinManager skinInstaller isNil.
-	
-	" the postpone action is runned when BlElementAddedToSceneGraph is sent "	
-	space root addChild: e.
-	self assert: e skinManager hasPostponedInstallSkinHandler not.
-	" should have 2 more event handlers (the skinStateGenerator + the one for postponedRequestInstallSkin)"
-	self
-		assert: e eventDispatcher handlers size
-		equals: handlersNb.
-	self assert: e skinManager skinInstaller notNil
-
-	
-
+	self assert: e skinManager installedSkin identicalTo: sk.
+	self deny: e skinManager newSkinRequested
 ]
 
 { #category : #tests }
@@ -281,9 +206,13 @@ ToSkinManagerTest >> testInstallSkinIn [
 
 	| e skin |
 	e := ToElement new.
+	space root addChild: e.
+
 	skin := ToRawSkin new.
+	" the element has an installed skin that must be uninstalled before "
+	e skinManager uninstallSkinIn: e.
 	e skinManager installSkin: skin in: e.
-	self assert: e skinManager installedSkin notNil
+	self assert: e skinManager installedSkin identicalTo: skin
 ]
 
 { #category : #tests }
@@ -291,17 +220,55 @@ ToSkinManagerTest >> testInstallSkinIn2 [
 
 	| e |
 	e := ToElement new.
-	self assert:
-		(e skinManager installedSkin) isNil.
+	self deny:
+		(e skinManager installedSkin) isThemeSkin.
 	" if not theme is found in its parent chain, then an element must be attached to a space. 
 	If not, skin installation raises an Error because during skin installation the element theme is lookup "
 	space root addChild: e.
+	e skinManager uninstallSkinIn: e.
 	e skinManager installSkin: (e skinManager skinToInstallIn: e) in: e.
 	self assert:
-		(e skinManager installedSkin) notNil.
+		(e skinManager installedSkin) isThemeSkin.
 	self
 		assert: (e skinManager installedSkin) class
 		equals: (e lookupTheme newSkinFor: e) class
+]
+
+{ #category : #tests }
+ToSkinManagerTest >> testInstallSkinIn3 [
+	| skin e eventHandlerCount |
+	e := BlElement new.
+	eventHandlerCount := e eventDispatcher handlers size.
+	e ensureHaveSkinManager.
+	self assert: e skinManager notNil.
+	skin := ToSkin new.
+	e skinManager installSkin: skin in: e.
+	self assert: (e eventDispatcher handlers
+			 detect: [ :h | h == skin ]
+			 ifNone: [  ]) notNil.
+	self assert: e skinManager installedSkin identicalTo: skin.
+	self
+		assert: e eventDispatcher handlers size
+		equals: eventHandlerCount + 1
+]
+
+{ #category : #tests }
+ToSkinManagerTest >> testInstallSkinInError [
+
+	| e skin debugWasEnabled |
+	debugWasEnabled := Bloc debugModeEnabled.
+	Bloc debugModeEnabled: true.
+	e := ToElement new.
+	skin := ToRawSkin new.
+	" an error is raised because the element is not attached "
+	self should: [ e skinManager installSkin: skin in: e ] raise: Error.
+
+	space root addChild: e.
+	e skinManager installSkin: skin in: e.
+	e skinManager uninstallSkinIn: e.
+	e skinManager installSkin: skin in: e.
+	self assert: e skinManager installedSkin isThemeSkin.
+	Bloc debugModeEnabled: debugWasEnabled.
 ]
 
 { #category : #tests }
@@ -313,9 +280,8 @@ ToSkinManagerTest >> testInstalledSkin [
 	e defaultSkin: (sk := ToRawSkin new).
 	self assert: (e skinManager skinToInstallIn: e) identicalTo: sk.
 	self assert: (e skinManager skinToInstallIn: e) identicalTo: sk.
-	self assert:
-		(e skinManager installedSkin) isNil.
-	self assert: e skinManager installedSkin isNil.
+	self assert: e skinManager installedSkin isThemeSkin.
+	e skinManager uninstallSkinIn: e.
 	e skinManager installSkin: sk in: e.
 	self assert: (e skinManager installedSkin) identicalTo: sk.
 	self assert: (e skinManager skinToInstallIn: e) identicalTo: sk.
@@ -328,7 +294,7 @@ ToSkinManagerTest >> testInstalledSkin [
 	e skinManager uninstallSkinIn: e.
 	self assert: (e skinManager skinToInstallIn: e) identicalTo: sk.
 	self assert: (e skinManager skinToInstallIn: e) identicalTo: sk.
-	self assert: e skinManager installedSkin isNil.
+	self deny: e skinManager installedSkin isThemeSkin.
 	self
 		assert:
 			(e eventDispatcher handlers select: [ :h | h isKindOf: ToRawSkin ])
@@ -337,63 +303,33 @@ ToSkinManagerTest >> testInstalledSkin [
 ]
 
 { #category : #tests }
+ToSkinManagerTest >> testInstalledSkin2 [
+	| skin e |
+	e := BlElement new.
+	e ensureHaveSkinManager.
+	skin := ToSkin new.
+	e skinManager installSkin: skin in: e.
+	self assert: e skinManager installedSkin identicalTo: skin
+]
+
+{ #category : #tests }
 ToSkinManagerTest >> testInstalledSkinDo [
 
 	| e sk cpt |
 	cpt := 0.
-	e := ToElement new. 
+	e := ToElement new.
+	space root addChild: e.
 	e defaultSkin: (sk := ToRawSkin new).
-	e skinManager installedSkinDo: [ :s | cpt := cpt + 1 ].
-	self assert: cpt isZero.
-	e skinManager installSkin: sk in: e.
 	e skinManager installedSkinDo: [ :s | cpt := cpt + 1 ].
 	self assert: cpt equals: 1.
 	e skinManager uninstallSkinIn: e.
+	e skinManager installSkin: sk in: e.
 	e skinManager installedSkinDo: [ :s | cpt := cpt + 1 ].
-	self assert: cpt equals: 1.
+	self assert: cpt equals: 2.
+	e skinManager uninstallSkinIn: e.
+	e skinManager installedSkinDo: [ :s | cpt := cpt + 1 ].
+	self assert: cpt equals: 2.
 
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testIsRequestSkinPostponed [
-
-	| e |
-	e := ToElement new.
-	self assert: e skinManager hasPostponedInstallSkinHandler not.
-	e skinManager requestInstallSkinIn: e.
-	" since the element is not attached to a space, the request skin is postponed "
-	self assert: e skinManager hasPostponedInstallSkinHandler.
-	self assert: e skinManager skinInstaller isNil
-
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testIsRequestSkinPostponed2 [
-
-	| e |
-	e := ToElement new.
-	self assert: e skinManager hasPostponedInstallSkinHandler not.
-	space root addChild: e.
-	" since the element is attached to a space, no request skin postponed "
-	self assert: e skinManager hasPostponedInstallSkinHandler not.
-	self assert: e skinManager skinInstaller notNil
-
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testIsSetUpForTheme [
-
-	| e theme skin |
-	e := ToElement new.
-	space := BlSpace new.
-	theme := ToRawTheme new.
-	self deny: (e skinManager isSetUpForTheme: theme).
-	self assert: e skinManager registeredThemeClasses isEmpty.
-	self assert: ((theme newSkinFor: e) isKindOf: ToRawSkin).
-	space root addChild: e.
-	skin := theme newSkinFor: e.
-	self assert: e skinManager registeredThemeClasses size equals: 1.
-	self assert: e skinManager registeredThemeClasses anyOne equals: ToRawTheme
 ]
 
 { #category : #tests }
@@ -401,106 +337,7 @@ ToSkinManagerTest >> testOnInstalledIn [
 
 	| e |
 	e := ToElement new.
-	self assert: e skinManager registeredThemeClasses notNil.
-	self assert: e skinManager registeredThemeClasses isEmpty.
-	self deny: e skinManager hasPostponedInstallSkinHandler.
-	self assert: e skinManager skinInstaller isNil.
-	e ensuredToStyleStore tokenPropertyIndex changedAction value.
-	self assert: e skinManager hasPostponedInstallSkinHandler.
-	self assert: e skinManager skinInstaller isNil
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testOnUninstalledIn [
-
-	| e |
-	e := ToElement new.
-	self assert: (e eventDispatcher handlers
-			 detect: [ :h | h isKindOf: ToSkinManagerEventHandler ]
-			 ifNone: [  ]) notNil.
-	self assert: e skinManager registeredThemeClasses notNil.
-	self assert: e skinManager skinInstaller isNil.
-	self assert: e skinManager skinUninstaller isNil.
-	self assert: e skinManager skinManagementEventHandler notNil.
-	e skinManager onUninstalledIn: e.
-	e eventDispatcher handlers noneSatisfy: [ :h |
-		h isKindOf: ToSkinManagerEventHandler ].
-	self assert: e skinManager skinInstaller isNil.
-	self assert: e skinManager skinUninstaller isNil.
-	self assert: e skinManager skinManagementEventHandler isNil
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testPostponeRequestSkinIn [
-
-	| e handlersNb |
-	e := ToElement new.
-	self assert: e skinManager hasPostponedInstallSkinHandler not.
-	handlersNb := e eventDispatcher handlers size.
-	e skinManager postponeRequestSkinIn: e.
-	self assert: e skinManager hasPostponedInstallSkinHandler.
-	self
-		assert: e eventDispatcher handlers size
-		equals: handlersNb + 1.
-	self assert: e skinManager skinInstaller isNil.
-	
-	" the postpone action is runned when BlElementAddedToSceneGraph is sent "	
-	space root addChild: e.
-	self assert: e skinManager hasPostponedInstallSkinHandler not.
-	" should have 2 more event handlers (the skinStateGenerator + the one for postponedRequestInstallSkin)"
-	self
-		assert: e eventDispatcher handlers size
-		equals: handlersNb.
-	self assert: e skinManager skinInstaller notNil
-
-	
-
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testRegisterTheme [
-
-	| e |
-	e := ToElement new.
-	self assert: e skinManager registeredThemeClasses notNil.
-	self assert: e skinManager registeredThemeClasses isEmpty.
-	e skinManager registerTheme: ToRawTheme new.
-	self assert: e skinManager registeredThemeClasses size equals: 1.
-	self
-		assert: e skinManager registeredThemeClasses anyOne
-		equals: ToRawTheme
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testRegisteredThemeClasses [
-
-	| e |
-	e := ToElement new.
-	self assert: e skinManager registeredThemeClasses notNil.
-	self assert: e skinManager registeredThemeClasses isEmpty.
-	e skinManager setUp: e forTheme: ToRawTheme new.
-	self assert: e skinManager registeredThemeClasses size equals: 1.
-	self
-		assert: e skinManager registeredThemeClasses anyOne
-		equals: ToRawTheme
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testRequestInstaallSkinInWithChildren [
-
-	| e child childchild |
-	e := ToElement new.
-	child := ToElement new.
-	childchild := ToElement new.
-	e addChild: child.
-	child addChild: childchild.
-	self assert: e skinManager hasPostponedInstallSkinHandler not.
-	e skinManager requestInstallSkinIn: e.
-	" the requestSkin is postpone since the element is not attached "
-	self assert: e skinManager hasPostponedInstallSkinHandler.
-	self assert: child skinManager hasPostponedInstallSkinHandler not.
-	self assert: childchild skinManager hasPostponedInstallSkinHandler not.
-
+	self deny: e skinManager newSkinRequested
 ]
 
 { #category : #tests }
@@ -508,10 +345,10 @@ ToSkinManagerTest >> testRequestInstallSkinIn [
 
 	| e  |
 	e := ToElement new.
-	self assert: e skinManager hasPostponedInstallSkinHandler not.
-	e skinManager requestInstallSkinIn: e.
+	space root addChild: e.
+	e skinManager requestNewSkinIn: e.
 	" the requestSkin is postpone since the element is not attached "
-	self assert: e skinManager hasPostponedInstallSkinHandler.
+	self assert: e skinManager newSkinRequested
 
 ]
 
@@ -521,9 +358,20 @@ ToSkinManagerTest >> testRequestInstallSkinInWhenInSpace [
 	| e |
 	e := ToElement new.
 	space root addChild: e.
-	" the requestSkin is not postpone since the element is attached "
-	self assert: e skinManager hasPostponedInstallSkinHandler not.
-	self assert: e skinManager skinInstaller notNil
+	self deny: e skinManager newSkinRequested.
+	self assert: e skinManager installedSkin isThemeSkin
+]
+
+{ #category : #tests }
+ToSkinManagerTest >> testRequestInstallSkinInWithChildren [
+
+	| e child childchild |
+	e := ToElement new.
+	child := ToElement new.
+	childchild := ToElement new.
+	e addChild: child.
+	child addChild: childchild.
+	e skinManager requestNewSkinIn: e
 ]
 
 { #category : #tests }
@@ -535,160 +383,16 @@ ToSkinManagerTest >> testRequestSkinInWithChildrenWhenInSpace [
 	childchild := ToElement new.
 	e addChild: child.
 	child addChild: childchild.
-	self assert: e skinManager hasPostponedInstallSkinHandler not.
-	space root addChild: e.
-	" the skinInstalled is added also on children "
-	self assert: e skinManager skinInstaller notNil.
-	self assert: child skinManager skinInstaller notNil.
-	self assert: childchild skinManager skinInstaller notNil.
 
-]
+	space deferAndSettle: [ space root addChild: e ].
 
-{ #category : #tests }
-ToSkinManagerTest >> testRequestUninstallSkinIn [
-
-	| e |
-	e := ToElement new.
-	e skinManager requestUninstallSkinIn: e.
-	self assert:
-		(e skinManager installedSkin) isNil.
-	self deny: e skinManager skinUninstaller notNil.
-
-	" requestSkin has not effect on skinUninstaller "
-	e skinManager requestInstallSkinIn: e.
-	self assert:
-		(e skinManager installedSkin) isNil.
-	self deny: e skinManager skinUninstaller notNil.
-	self assert: e skinManager hasPostponedInstallSkinHandler.
-	self assert: e skinManager skinInstaller isNil.
-
-	" uninstalling has not effect on skin installer"
-	e skinManager applySkinUninstallerIn: e.
-	self assert: e skinManager skinUninstaller isNil.
-	self assert: e skinManager skinInstaller isNil.
-	self assert: e skinManager hasPostponedInstallSkinHandler
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testRequestUninstallSkinInWithChildrenWithInstalledSkin [
-
-	| e child childchild |
-	e := ToElement new.
-	child := ToElement new.
-	childchild := ToElement new.
-	e addChild: child.
-	child addChild: childchild.
-	space root addChild: e.
-
-	" install skin on the element tree "
-	e space applyAllSkinInstallers.
-	self assert: e skinManager installedSkin notNil.
-	self assert: e skinManager skinInstaller isNil.
-	self assert: child skinManager installedSkin notNil.
-	self assert: child skinManager skinInstaller isNil.
-	self assert: childchild skinManager installedSkin notNil.
-	self assert: childchild skinManager skinInstaller isNil.
-
-	e skinManager requestUninstallSkinIn: e.
-	self assert: e skinManager skinUninstaller notNil.
-	" but installed skin not yet uninstalled "
-	self assert: e skinManager installedSkin notNil.
-
-	" uninstalling "
-	e skinManager applySkinUninstallerIn: e.
-	self assert: e skinManager installedSkin isNil.
-	self assert: e skinManager skinUninstaller isNil.
-	self assert: e skinManager skinInstaller isNil.
-
-	" but no effect on children "
-	self assert: child skinManager installedSkin notNil.
-	self assert: childchild skinManager installedSkin notNil.
-
-	e skinManager applySkinInstallerIn: e.
-	self assert: e skinManager installedSkin isNil.
-	e ensuredSkinManager requestInstallSkinIn: e.
-	e skinManager applySkinInstallerIn: e.
-	self assert: e skinManager installedSkin notNil.
-	self assert: e skinManager skinUninstaller isNil.
-	self assert: e skinManager skinInstaller isNil
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testRequestUninstallSkinInWithChildrenWithInstalledSkin2 [
-
-	| e child childchild |
-	e := ToElement new.
-	child := ToElement new.
-	childchild := ToElement new.
-	e addChild: child.
-	child addChild: childchild.
-	space root addChild: e.
-
-	" install skin on the element tree "
-	e space applyAllSkinInstallers.
-	self assert: e skinManager installedSkin notNil.
-	self assert: e skinManager skinInstaller isNil.
-	self assert: child skinManager skinInstaller isNil.
-	self assert: childchild skinManager installedSkin notNil.
-	self assert: childchild skinManager skinInstaller isNil.
-
-	e skinManager requestUninstallSkinIn: e.
-
-	self assert: e skinManager skinUninstaller notNil.
-	self assert: child skinManager skinUninstaller isNil.
-	self assert: childchild skinManager skinUninstaller isNil.
-	" but installed skin not yet uninstalled "
-	self assert: e skinManager installedSkin notNil.
-	self assert: child skinManager installedSkin notNil.
-	self assert: childchild skinManager installedSkin notNil.
-
-	e skinManager applySkinUninstallerIn: e.
-	self assert: e skinManager installedSkin isNil.
-
-	" trying to install here should not results in an installed skin because no installer has been requested "
-	e skinManager applySkinReinstallIn: e.
-	self assert: e skinManager installedSkin isNil.
-
-	self assert: child skinManager installedSkin notNil.
-	self assert: childchild skinManager installedSkin notNil
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testRequestUninstallSkinInWithInstalledSkin [
-
-	| e |
-	e := ToElement new.
-	" to ensure that the element has an installed skin "
-	space root addChild: e.
-	e skinManager applySkinReinstallIn: e.
-	self assert: e skinManager skinInstaller isNil.
-
-	e skinManager requestUninstallSkinIn: e.
-	self assert: e skinManager skinUninstaller notNil.
-	" but installed skin not yet uninstalled "
-	self assert: e skinManager installedSkin notNil.
-
-	" uninstalling "
-	e skinManager applySkinUninstallerIn: e.
-	self assert: e skinManager installedSkin isNil.
-	self assert: e skinManager skinUninstaller isNil.
-	self assert: e skinManager skinInstaller isNil
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testSetDefaultRawSkinIn [
-
-	| e sk |
-	e := ToElement new.
-	e skinManager setDefaultRawSkin: (sk := ToRawSkin new) in: e.
-	self assert: e skinManager defaultRawSkin identicalTo: sk.
-	self assert: e skinManager defaultSkin isNil.
-	self should: [ e skinManager skinToInstallIn: e ] raise: Error.
-	space root addChild: e.
-	self assert: (e skinManager skinToInstallIn: e) identicalTo: sk.
-	self assert: e skinManager installedSkin isNil.
-	self deny: e skinManager skinUninstaller notNil.
-	self assert: e skinManager skinInstaller notNil
+	" the skin is also installed in children "
+	self deny: e skinManager newSkinRequested.
+	self deny: child skinManager newSkinRequested.
+	self deny: childchild skinManager newSkinRequested.
+	self assert: e skinManager installedSkin isThemeSkin.
+	self assert: child skinManager installedSkin isThemeSkin.
+	self assert: childchild skinManager installedSkin isThemeSkin
 ]
 
 { #category : #tests }
@@ -696,75 +400,19 @@ ToSkinManagerTest >> testSetDefaultSkinIn [
 
 	| e sk |
 	e := ToElement new.
-	space root addChild: e.
-	e skinManager setDefaultSkin: (sk := ToRawSkin new) in: e.
+	space deferAndSettle: [
+		space root addChild: e.
+		e defaultSkin: (sk := ToRawSkin new) ].
 	self assert: (e skinManager skinToInstallIn: e) identicalTo: sk.
 	self assert: (e skinManager skinToInstallIn: e) identicalTo: sk.
-	self assert: e skinManager defaultSkin identicalTo: sk.
-	self assert: e skinManager installedSkin isNil.
+	self assert: e defaultSkin identicalTo: sk.
+
+	space settle.
 	self
 		assert:
 			(e eventDispatcher handlers select: [ :h | h isKindOf: ToRawSkin ])
 				size
-		equals: 0
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testSetStyleSheetIn [
-
-	| e |
-	e := ToElement new.
-	e skinManager setStyleSheet: ToStyleSheet new in: e.
-	self assert: e skinManager styleSheet notNil
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testSetUpForTheme [
-
-	| e theme |
-	e := ToElement new.
-	self assert: e skinManager registeredThemeClasses notNil.
-	self assert: e skinManager registeredThemeClasses isEmpty.
-	theme := ToRawTheme new.
-	self deny: (e skinManager isSetUpForTheme: theme).
-	e skinManager setUp: e forTheme: theme.
-	self assert: (e skinManager isSetUpForTheme: theme).
-	self assert: e skinManager registeredThemeClasses size equals: 1.
-	self
-		assert: e skinManager registeredThemeClasses anyOne
-		equals: ToRawTheme.
-	e skinManager setUp: e forTheme: ToRawTheme new.
-	self assert: e skinManager registeredThemeClasses size equals: 1.
-	self
-		assert: e skinManager registeredThemeClasses anyOne
-		equals: ToRawTheme
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testSetUpForThemeIn2 [
-
-	| e theme skin |
-	e := ToElement new.
-	space := BlSpace new.
-	self assert: e skinManager registeredThemeClasses notNil.
-	self assert: e skinManager registeredThemeClasses isEmpty.
-	theme := ToRawTheme new.
-	space root addChild: e.
-	skin := theme newSkinFor: e.
-	self assert: e skinManager registeredThemeClasses size equals: 1.
-	self
-		assert: e skinManager registeredThemeClasses anyOne
-		equals: ToRawTheme
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testSkinContext [
-
-	| e |
-	e := ToElement new.
-	self assert: e skinManager skinContext isNil.
-	e skinManagerDo: [ :skm | skm ensureHaveSkinContext ].
-	self assert: e skinManager skinContext notNil
+		equals: 1
 ]
 
 { #category : #tests }
@@ -776,15 +424,15 @@ ToSkinManagerTest >> testSkinInstaller [
 	childchild := ToElement new.
 	e addChild: child.
 	child addChild: childchild.
+	self deny: e skinManager newSkinRequested.
+	self deny: child skinManager newSkinRequested.
+	self deny: childchild skinManager newSkinRequested.
 
-	self assert: e skinManager skinInstaller isNil.
-	self assert: child skinManager skinInstaller isNil.
-	self assert: childchild skinManager skinInstaller isNil.
-
-	space root addChild: e.
-	self assert: e skinManager skinInstaller notNil.
-	self assert: child skinManager skinInstaller notNil.
-	self assert: childchild skinManager skinInstaller notNil
+	space deferAndSettle: [ space root addChild: e ].
+	" first skinInstaller is applied  "
+	self deny: e skinManager newSkinRequested.
+	self deny: child skinManager newSkinRequested.
+	self deny: childchild skinManager newSkinRequested
 ]
 
 { #category : #tests }
@@ -797,13 +445,12 @@ ToSkinManagerTest >> testSkinInstaller2 [
 	e addChild: child.
 	child addChild: childchild.
 
-	self assert: e skinManager skinInstaller isNil.
-	self assert: child skinManager skinInstaller isNil.
-	self assert: childchild skinManager skinInstaller isNil.
+	self deny: e skinManager newSkinRequested.
+	self deny: child skinManager newSkinRequested.
+	self deny: childchild skinManager newSkinRequested.
 
-	e ensuredSkinManager requestInstallSkinIn: e.
-	self assert: e skinManager skinInstaller isNil.
-	self assert: e skinManager hasPostponedInstallSkinHandler
+	e ensuredSkinManager requestNewSkinIn: e.
+	self assert: e skinManager newSkinRequested
 ]
 
 { #category : #tests }
@@ -815,78 +462,46 @@ ToSkinManagerTest >> testSkinStateQueue [
 ]
 
 { #category : #tests }
-ToSkinManagerTest >> testSkinUninstaller [
-
-	| e child childchild |
-	e := ToElement new.
-	child := ToElement new.
-	childchild := ToElement new.
-	e addChild: child.
-	child addChild: childchild.
-
-	self assert: e skinManager skinUninstaller isNil.
-	self assert: child skinManager skinUninstaller isNil.
-	self assert: childchild skinManager skinUninstaller isNil.
-
-	space root addChild: e.
-	self assert: e skinManager skinInstaller notNil.
-	self assert: e skinManager skinUninstaller isNil.
-	" child skinInstaller is set explicitely with requestUninstallSkin "
-	self assert: child skinManager skinUninstaller isNil.
-	self assert: childchild skinManager skinUninstaller isNil
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testSkinUninstallerWithToThemeChanged [
-
-	| e child childchild |
-	e := ToElement new.
-	child := ToElement new.
-	childchild := ToElement new.
-	e addChild: child.
-	child addChild: childchild.
-
-	self assert: e skinManager skinUninstaller isNil.
-	self assert: child skinManager skinUninstaller isNil.
-	self assert: childchild skinManager skinUninstaller isNil.
-
-	space root addChild: e.
-	e toThemeInstalled.
-	self assert: e skinManager skinInstaller notNil.
-	self assert:
-		(e skinManager installedSkin) isNil.
-	self deny: e skinManager skinUninstaller notNil.
-	self assert:
-		(child skinManager installedSkin) isNil.
-	self deny: child skinManager skinUninstaller notNil.
-	self assert:
-		(childchild skinManager installedSkin) isNil.
-	self deny: childchild skinManager skinUninstaller notNil
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testStyleSheet [
-
-	self testSetStyleSheetIn 
-]
-
-{ #category : #tests }
-ToSkinManagerTest >> testTextAttributesBuilderIn [
-
-	| e |
-	e := ToElement new.
-	e skinManagerDo: [ :skm | skm ensureHaveSkinContext ].
-	self assert: e textAttributesBuilder notNil
-]
-
-{ #category : #tests }
 ToSkinManagerTest >> testUninstallSkinIn [
 
 	| e skin |
 	e := ToElement new.
+	space root addChild: e.
 	skin := ToRawSkin new.
-	e skinManager installSkin: skin in: e.
-	self assert: e skinManager installedSkin notNil.
 	e skinManager uninstallSkinIn: e.
-	self assert: e skinManager installedSkin isNil
+	self deny: e skinManager installedSkin isThemeSkin.
+	e skinManager installSkin: skin in: e.
+	self assert: e skinManager installedSkin isThemeSkin.
+	e skinManager uninstallSkinIn: e.
+	self deny: e skinManager installedSkin isThemeSkin
+]
+
+{ #category : #tests }
+ToSkinManagerTest >> testUninstallSkinIn2 [
+
+	| skin e eventHandlerCount |
+	e := ToElement new.
+	e ensureHaveSkinManager.
+	eventHandlerCount := e eventDispatcher handlers size.
+	space root addChild: e.
+	self assert: e skinManager notNil.
+	skin := ToRawSkin new.
+	e skinManager uninstallSkinIn: e.
+	e skinManager installSkin: skin in: e.
+	" the assert is ok here because the theme has been initialized before "
+	self assert: e skinManager installedSkin identicalTo: skin.
+	" one more event handler, a ToElementInitializeEventHandler is added"
+	self
+		assert: e eventDispatcher handlers size
+		equals: eventHandlerCount + 1.
+	self assert: (e eventDispatcher handlers
+			 select: [ :h | h isKindOf: ToElementInitializeEventHandler ]) size = 1.
+	e skinManager uninstallSkinIn: e.
+	self
+		assert: e eventDispatcher handlers size
+		equals: eventHandlerCount.
+	self assert: e skinManager notNil.
+	self
+		assert: e skinManager installedSkin
+		identicalTo: ToUnknownSkin instance
 ]

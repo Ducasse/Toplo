@@ -1,73 +1,67 @@
 Class {
 	#name : #ToOverlayElement,
 	#superclass : #BlOverlayElement,
-	#traits : 'TBlLayoutResizable',
-	#classTraits : 'TBlLayoutResizable classTrait',
+	#traits : 'TToElement',
+	#classTraits : 'TToElement classTrait',
 	#instVars : [
-		'positionHook',
-		'sizeHook'
+		'mouseEventAllowed'
 	],
-	#category : #'Toplo-Core'
+	#category : #'Toplo-Core-Overlay'
 }
 
-{ #category : #'hook - geometry' }
-ToOverlayElement >> extentFrom: anExtent [
+{ #category : #configuration }
+ToOverlayElement >> applyConfiguration [
 
-	^ sizeHook
-		  ifNil: [ super extentFrom: anExtent ]
-		  ifNotNil: [ sizeHook value: referenceElement value: anExtent ]
+	super applyConfiguration.
+	mouseEventAllowed
+		ifTrue: [ self allowMouseEvents ]
+		ifFalse: [ self preventMouseEvents ]
+]
+
+{ #category : #'api - attaching / detaching' }
+ToOverlayElement >> attachToParent: anElement [
+
+	self attachTo: anElement.
+	anElement addChild: self
+]
+
+{ #category : #'api - attaching / detaching' }
+ToOverlayElement >> detachFromParent [
+
+	self detach.
+	self removeFromParent
+]
+
+{ #category : #initialization }
+ToOverlayElement >> initialize [ 
+
+	super initialize.
+	self initializeForToplo.
+	mouseEventAllowed := false
 ]
 
 { #category : #testing }
 ToOverlayElement >> isBeneath [ 
 
-	^ self elevation < referenceElement elevation
+	^ self elevation < overlayReferenceElement elevation
 ]
 
 { #category : #testing }
 ToOverlayElement >> isOver [
 
-	^ self elevation > referenceElement elevation
-]
-
-{ #category : #'hook - geometry' }
-ToOverlayElement >> positionFrom: aPosition [
-
-	^ positionHook
-		  ifNil: [ super positionFrom: aPosition ]
-		  ifNotNil: [ positionHook value: referenceElement value: aPosition ]
+	^ self elevation > overlayReferenceElement elevation
 ]
 
 { #category : #accessing }
-ToOverlayElement >> positionHook [
+ToOverlayElement >> mouseEventAllowed: aBoolean [
 
-	^ positionHook
+	aBoolean = mouseEventAllowed ifTrue: [ ^ self ].
+	mouseEventAllowed := aBoolean.
+	self requestConfiguration 
 ]
 
 { #category : #accessing }
-ToOverlayElement >> positionHook: aValuable [
-	" 
-	Computes the overlay position according to the attached element position.
-	aValuable takes the attached element as first arg, the candidate overlay position as second arg 
-	and return the new overlay element position. 
-	 "
-	
-	positionHook := aValuable
-]
+ToOverlayElement >> referenceElement [
 
-{ #category : #accessing }
-ToOverlayElement >> sizeHook [
-	
-	^ sizeHook
-]
-
-{ #category : #accessing }
-ToOverlayElement >> sizeHook: aValuable [
-	" 
-	Computes the overlay size according to the attached element size.
-	aValuable takes the attached element as first arg, the candidate overlay size as second arg 
-	and return the new overlay element size.
-	"
-
-	sizeHook := aValuable
+	^ overlayReferenceElement 
 ]

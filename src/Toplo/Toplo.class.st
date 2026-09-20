@@ -2,10 +2,34 @@ Class {
 	#name : #Toplo,
 	#superclass : #Object,
 	#classVars : [
-		'DefaultThemeClass'
+		'DefaultThemeClass',
+		'LastInstalledTheme',
+		'ToploAnnouncer'
 	],
 	#category : #'Toplo-Core'
 }
+
+{ #category : #accessing }
+Toplo class >> announcer [
+
+	^ ToploAnnouncer ifNil: [ ToploAnnouncer := Announcer  new ]
+]
+
+{ #category : #initialization }
+Toplo class >> closeAllSpaces [
+
+	self
+		deprecated: 'Use #closeSpaces instead'
+		transformWith: '`@receiver closeAllSpaces' -> '`@receiver closeSpaces'.
+
+	self closeSpaces
+]
+
+{ #category : #initialization }
+Toplo class >> closeSpaces [
+
+	Bloc closeSpaces
+]
 
 { #category : #settings }
 Toplo class >> defaultThemeClass [
@@ -16,13 +40,37 @@ Toplo class >> defaultThemeClass [
 { #category : #settings }
 Toplo class >> defaultThemeClass: aClass [
 
-	DefaultThemeClass := aClass
+	DefaultThemeClass = aClass ifTrue: [ ^ self ].
+	DefaultThemeClass := aClass.
+	self announcer announce: ToThemeSettingChangedEvent
+]
+
+{ #category : #accessing }
+Toplo class >> lastInstalledTheme [
+	" can serve as a fallback skin in case of error. 
+	For example, to try to not break the UI when fetching a stamp or a token value "
+	^ LastInstalledTheme 
+]
+
+{ #category : #accessing }
+Toplo class >> lastInstalledTheme: aTheme [
+
+	LastInstalledTheme := aTheme
 ]
 
 { #category : #settings }
 Toplo class >> newDefaultThemeInstance [
 
 	^ self defaultThemeClass new
+]
+
+{ #category : #initialization }
+Toplo class >> resetCanvasScaleFactor [
+
+	<script>
+	OSWorldRenderer
+		autoSetCanvasScaleFactor: false;
+		canvasScaleFactor: 1
 ]
 
 { #category : #settings }

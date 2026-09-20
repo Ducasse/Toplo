@@ -1,14 +1,12 @@
 Class {
 	#name : #ToLabel,
-	#superclass : #ToElement,
-	#traits : 'TBlTextStyleable',
-	#classTraits : 'TBlTextStyleable classTrait',
+	#superclass : #ToShrinkableContainer,
+	#traits : 'TToElementWithContentEditor + TToListItem',
+	#classTraits : 'TToElementWithContentEditor classTrait + TToListItem classTrait',
 	#instVars : [
-		'isEditable',
 		'innerElement',
-		'lineMode',
-		'frameManager',
-		'currText'
+		'editorWindowManager',
+		'currentText'
 	],
 	#category : #'Toplo-Widget-Album-Label'
 }
@@ -17,19 +15,6 @@ Class {
 ToLabel class >> text: aText [
 
 	^ self new text: aText
-]
-
-{ #category : #'private-editing' }
-ToLabel >> addEditorEvent: anEvent [
-
-	self innerElement visibility: BlVisibility hidden.
-	self hasEditor ifTrue: [  ^ self ].
-	(self newEditorFrameEvent: anEvent) popupEvent: anEvent.
-	self editor requestFocus.
-	self editor selecter
-		all;
-		apply.
-	self editorBuilder value: self editor value: self
 ]
 
 { #category : #styling }
@@ -48,6 +33,18 @@ ToLabel >> applyStyle [
 	self attributesBuilder applyOn: self text
 ]
 
+{ #category : #converting }
+ToLabel >> asToLabelText [ 
+
+	^ self text copy
+]
+
+{ #category : #accessing }
+ToLabel >> attributes: anArray [
+
+	self attributesBuilder attributes: anArray
+]
+
 { #category : #accessing }
 ToLabel >> attributesBuilder [
 	<return: #BlTextAttributesBuilder>
@@ -55,40 +52,48 @@ ToLabel >> attributesBuilder [
 	^ self textAttributesBuilder
 ]
 
-{ #category : #accessing }
+{ #category : #configurating }
 ToLabel >> beEditable [
 
 	self isEditable: true
 ]
 
-{ #category : #initialization }
+{ #category : #configurating }
 ToLabel >> beMonoLine [
 
-	self restoreTextAfter: [ self lineMode: ToLabelLineMode mono ]
+	self multiLine: false
 ]
 
-{ #category : #initialization }
+{ #category : #configurating }
 ToLabel >> beMultiLine [
 
-	self restoreTextAfter: [ self lineMode: ToLabelLineMode multi ]
+	self multiLine: true
 ]
 
-{ #category : #accessing }
+{ #category : #configurating }
 ToLabel >> beReadOnly [
 
 	self isEditable: false
 ]
 
-{ #category : #'private-editing' }
-ToLabel >> cleanUpUserData [
+{ #category : #'t - element with content editor' }
+ToLabel >> beforeEditorClosed: anEditorElement fromManager: aManager [
+	" sent from the window manager "
 
-	self userData removeKey: #editor ifAbsent: [  ]
+	innerElement visibility: BlVisibility visible
 ]
 
-{ #category : #'private-editing' }
-ToLabel >> currentEditorFrame [
+{ #category : #'t - element with content editor' }
+ToLabel >> beforeEditorOpened: anEditorElement fromManager: aManager [
+	" sent from the window manager "
 
-	^ frameManager currentWindow
+	innerElement visibility: BlVisibility hidden
+]
+
+{ #category : #'api - text weight' }
+ToLabel >> bold [
+
+	self attributesBuilder attribute: BlFontWeightAttribute bold
 ]
 
 { #category : #initialization }
@@ -97,10 +102,16 @@ ToLabel >> defaultEventHandler [
 	^ ToLabelEventHandler new
 ]
 
-{ #category : #initialization }
-ToLabel >> defaultLineMode [
+{ #category : #'api - text font' }
+ToLabel >> defaultFontName: aString [
 
-	^ ToLabelLineMode mono
+	self attributesBuilder attribute: (BlFontFamilyDefaultAttribute named: aString)
+]
+
+{ #category : #'api - text font' }
+ToLabel >> defaultFontSize: aNumber [
+
+	self attributesBuilder attribute: (BlFontSizeDefaultAttribute size: aNumber)
 ]
 
 { #category : #initialization }
@@ -116,36 +127,37 @@ ToLabel >> defaultText [
 	^ '' asRopedText
 ]
 
-{ #category : #initialization }
-ToLabel >> defaultTextElement [
-
-	^ self lineMode newTextElementIn: self
-]
-
-{ #category : #'private-editing' }
-ToLabel >> editor [
-
-	^ self userData at: #editor ifAbsent: [  ]
-]
-
 { #category : #accessing }
-ToLabel >> editorBuilder [
-	" returns a valuable that takes the editor and the label as arguments "
+ToLabel >> editorWindowManager [
 
-	^ self userData at: #editorBuilder ifAbsentPut: [ [ :ed :theLabel | ] ]
+	^ editorWindowManager 
 ]
 
-{ #category : #accessing }
-ToLabel >> editorBuilder: aValuable [
-	" aValuable takes the editor and the label as arguments "
+{ #category : #'api - text font' }
+ToLabel >> fontName: aString [
 
-	self userData at: #editorBuilder put: aValuable
+	self attributesBuilder attribute: (BlFontFamilyAttribute named: aString)
+]
+
+{ #category : #'api - text font' }
+ToLabel >> fontSize: aNumber [
+
+	self attributesBuilder attribute: (BlFontSizeAttribute size: aNumber)
+]
+
+{ #category : #'api - text style' }
+ToLabel >> foreground: aBlPaint [
+
+	"self text asString = '3: Arizona' ifTrue: [ 'foreground. ' trace. aBlPaint traceCr ]."
+	self attributesBuilder attribute: (BlTextForegroundAttribute paint: aBlPaint)
 ]
 
 { #category : #'private-editing' }
 ToLabel >> hasEditor [
+	" my window manager has a window "
 
-	^ frameManager notNil and: [ frameManager currentWindow notNil ]
+	^ editorWindowManager notNil and: [
+		  editorWindowManager currentWindow notNil ]
 ]
 
 { #category : #accessing }
@@ -157,30 +169,21 @@ ToLabel >> hasText [
 { #category : #initialization }
 ToLabel >> initialize [
 
-	self class initializeSlots: self.
 	super initialize.
-	self applySkinInstallerOnFirstRequest: true.
 	self fitContent.
+	self focusability: BlFocusability none.
 
-	self lineMode: self defaultLineMode.
-	self innerElement: self defaultTextElement.	
+	self initializeInnerElement.
 	self text: self defaultText.
 
 	self isEditable: false.
 	self addEventHandler: self defaultEventHandler 
 ]
 
-{ #category : #'private-editing' }
-ToLabel >> initializeEditorFrameBuilder [
+{ #category : #initialization }
+ToLabel >> initializeInnerElement [
 
-	self isEditable
-		ifTrue: [
-			frameManager := ToLabelEditorWindowManager new.
-			frameManager onInstalledIn: self ]
-		ifFalse: [
-			frameManager ifNil: [ ^ self ].
-			frameManager element: nil.
-			frameManager := nil ]
+	self innerElement: ToLabelMonoLineInnerElement new
 ]
 
 { #category : #accessing }
@@ -195,21 +198,28 @@ ToLabel >> innerElement: anInnerElement [
 	innerElement = anInnerElement ifTrue: [ ^ self ].
 	innerElement ifNotNil: [ innerElement removeFromParent ].
 	innerElement := anInnerElement.
-	self addChild: innerElement
+	" the first position ensure that the inner element will be used to shrink myself because
+	only the first element is taken into account.
+	see ToShrinkableContainer>>onChildAdded: "
+	self addChild: innerElement at: 1
 ]
 
-{ #category : #accessing }
+{ #category : #testing }
 ToLabel >> isEditable [
 
-	^ isEditable 
+	^ editorWindowManager notNil 
 ]
 
 { #category : #accessing }
 ToLabel >> isEditable: aBoolean [
 
-	isEditable = aBoolean ifTrue: [ ^ self ].
-	isEditable := aBoolean.
-	self initializeEditorFrameBuilder
+	aBoolean
+		ifTrue: [
+			editorWindowManager ifNotNil: [ ^ self ].
+			self addEventHandler: ToLabelEditorManager new ]
+		ifFalse: [
+			editorWindowManager ifNil: [ ^ self ].
+			self removeEventHandler: editorWindowManager ]
 ]
 
 { #category : #testing }
@@ -218,60 +228,48 @@ ToLabel >> isFrozen [
 	^ false
 ]
 
-{ #category : #accessing }
+{ #category : #testing }
 ToLabel >> isMonoLine [
 
-	^ self lineMode
-		  ifNil: [ ^ false ]
-		  ifNotNil: [ :mode | mode isMonoLine ]
+	^ innerElement isMonoLine
 ]
 
-{ #category : #accessing }
+{ #category : #testing }
 ToLabel >> isMultiLine [
 
-	^ self lineMode
-		  ifNil: [ ^ false ]
-		  ifNotNil: [ :mode | mode isMultiLine ]
+	^ innerElement isMonoLine not
+]
+
+{ #category : #'api - text emphasis' }
+ToLabel >> italic [
+
+	self attributesBuilder attribute: BlFontEmphasisAttribute italic
 ]
 
 { #category : #accessing }
-ToLabel >> lineMode [
-
-	^ lineMode
-]
-
-{ #category : #accessing }
-ToLabel >> lineMode: aLineMode [
-
-	lineMode = aLineMode ifTrue: [ ^ self ].
-	lineMode := aLineMode.
-	self lineModeChanged 
-]
-
-{ #category : #'private-change' }
-ToLabel >> lineModeChanged [
-
-	self restoreTextAfter: [ self innerElement: self defaultTextElement ]
-]
-
-{ #category : #initialization }
 ToLabel >> monoLine: aBoolean [
 
+	self multiLine: aBoolean not
+]
+
+{ #category : #accessing }
+ToLabel >> multiLine: aBoolean [
+
+	| inner |
 	aBoolean
-		ifTrue: [ self beMonoLine ]
-		ifFalse: [ self beMultiLine ]
+		ifTrue: [
+			self isMultiLine ifTrue: [ ^ self ].
+			inner := ToLabelMultiLineInnerElement new ]
+		ifFalse: [
+			self isMonoLine ifTrue: [ ^ self ].
+			inner := ToLabelMonoLineInnerElement new ].
+	self restoreTextAfter: [ self innerElement: inner ]
 ]
 
-{ #category : #'private-editing' }
-ToLabel >> newEditor [
+{ #category : #'t - element with content editor' }
+ToLabel >> newEditorForManager: aManager [
 
-	^ self userData at: #editor put: (self innerElement newEditorIn: self)
-]
-
-{ #category : #'private-editing' }
-ToLabel >> newEditorFrameEvent: anEvent [
-
-	^  frameManager newWindowEvent: anEvent
+	^ aManager newEditorForLabel: self
 ]
 
 { #category : #skin }
@@ -286,12 +284,30 @@ ToLabel >> newTextAttributesBuilder [
 	^ ToLabelAttributesBuilder onLabel: self
 ]
 
+{ #category : #'api - text emphasis' }
+ToLabel >> normal [
+
+	self attributesBuilder attribute: BlFontEmphasisAttribute normal
+]
+
+{ #category : #'api - text emphasis' }
+ToLabel >> oblique [
+
+	self attributesBuilder attribute: BlFontEmphasisAttribute oblique
+]
+
+{ #category : #'t - element with content editor' }
+ToLabel >> onInstalledEditorManager: anEditorManager [
+
+	editorWindowManager := anEditorManager
+]
+
 { #category : #'private-change' }
 ToLabel >> onStringsInserted: aBlTextStringsInserted [
 
 	self isFrozen ifTrue: [ ^ self ].
 	aBlTextStringsInserted strings ifEmpty: [ ^ self ].
-	currText := self text copy.
+	currentText := self text copy.
 	self textChanged
 ]
 
@@ -299,8 +315,8 @@ ToLabel >> onStringsInserted: aBlTextStringsInserted [
 ToLabel >> onTextAttributeAdded: aBlTextAttributeAdded [
 	
 	self isFrozen ifTrue: [ ^ self ].
-	currText rope = self text rope ifTrue: [ ^ self ].
-	currText := self text copy.
+	currentText rope = self text rope ifTrue: [ ^ self ].
+	currentText := self text copy.
 	self textChanged
 
 ]
@@ -309,26 +325,47 @@ ToLabel >> onTextAttributeAdded: aBlTextAttributeAdded [
 ToLabel >> onTextAttributesRemoved: aBlTextAttributesRemoved [
 
 	self isFrozen ifTrue: [ ^ self ].
-	currText rope = self text rope ifTrue: [ ^ self ].
-	currText := self text copy.
+	currentText rope = self text rope ifTrue: [ ^ self ].
+	currentText := self text copy.
 	self textChanged
 
 ]
 
 { #category : #'private-change' }
-ToLabel >> onTextsDeleted: aString [
+ToLabel >> onTextsDeleted: aBlTextsDeleted [
 
 	self isFrozen ifTrue: [ ^ self ].
-	aString ifEmpty: [  ^ self ].
-	currText := self text copy.
+	currentText := self text copy.
 	self textChanged
+]
+
+{ #category : #'t - element with content editor' }
+ToLabel >> onUninstalledEditorManager: anEditorManager [
+
+	editorWindowManager := nil
+]
+
+{ #category : #'private-editing' }
+ToLabel >> popupEditorEvent: anEvent [
+	" prepare the window with the editor and open it"
+
+	self hasEditor ifTrue: [ ^ self ].
+	self isAttachedToSceneGraph ifFalse: [ ^ self ].
+	(editorWindowManager createNewWindowOnEvent: anEvent) ifNotNil: [ :win |
+		win popupEvent: anEvent ]
+]
+
+{ #category : #printing }
+ToLabel >> printOn: aStream [
+
+	aStream << self class name << '(' << self text asString << ')'
 ]
 
 { #category : #'private-change' }
 ToLabel >> privateText: aText [
 
 	self innerElement text: aText.
-	currText:= self text copy.
+	currentText:= self text copy.
 	self text
 		when: BlTextStringsInserted
 		send: #onStringsInserted:
@@ -344,12 +381,10 @@ ToLabel >> privateText: aText [
 		to: self
 ]
 
-{ #category : #'private-editing' }
-ToLabel >> removeEditor [
+{ #category : #'api - text weight' }
+ToLabel >> regular [
 
-	self currentEditorFrame ifNotNil: [:w | w close].
-	self innerElement visibility: BlVisibility visible.
-	self cleanUpUserData
+	self attributesBuilder attribute: BlFontWeightAttribute normal
 ]
 
 { #category : #'private-change' }
@@ -367,7 +402,15 @@ ToLabel >> rotateBy: aDegreesAngle [
 
 	self innerElement
 		constraintsDo: [ :c | c accountTransformation ];
-		transformDo: [ :t | t rotateBy: aDegreesAngle ]
+		transformDo: [ :t | 
+			t normalizedOrigin: 0.5 @ 0.5.
+			t rotateBy: aDegreesAngle ]
+]
+
+{ #category : #'api - text style' }
+ToLabel >> spacing: aNumber [
+
+	self attributesBuilder attribute: (BlTextSpacingAttribute spacing: aNumber)
 ]
 
 { #category : #styling }
@@ -394,12 +437,9 @@ ToLabel >> text: aBlTextOrString [
 	| newText |
 	self isFrozen ifTrue: [ ^ self ].
 	self text = aBlTextOrString ifTrue: [ ^ self ].
-	" unsubscribe previous text "
-	self text ifNotNil: [self text unsubscribe: self].
 	" subscribe to internal text state change (insertion/deletion/attribute change) "
 	newText := (aBlTextOrString ifNil: [ self defaultText ]) asRopedText.
 	self privateText: newText.
-	self dispatchEvent: (ToLabelTextReplacedEvent new text: self text).
 	self requestNewSkin
 ]
 
@@ -407,4 +447,28 @@ ToLabel >> text: aBlTextOrString [
 ToLabel >> textChanged [
 
 	self innerElement textChanged
+]
+
+{ #category : #'api - text weight' }
+ToLabel >> thin [
+
+	self attributesBuilder attribute: BlFontWeightAttribute thin
+]
+
+{ #category : #'api - text weight' }
+ToLabel >> weight: aNumber [
+
+	self attributesBuilder attribute: (BlFontWeightAttribute weight: aNumber)
+]
+
+{ #category : #'private-editing' }
+ToLabel >> whenEditorClosedDo: aValuable [
+
+	editorWindowManager whenEditorClosedDo: aValuable
+]
+
+{ #category : #'private-editing' }
+ToLabel >> whenEditorOpenedDo: aValuable [
+
+	editorWindowManager whenEditorOpenedDo: aValuable
 ]

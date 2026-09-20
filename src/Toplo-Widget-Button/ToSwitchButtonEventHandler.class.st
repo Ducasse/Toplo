@@ -4,16 +4,11 @@ Class {
 	#category : #'Toplo-Widget-Button-Switch'
 }
 
-{ #category : #'checkable event handling' }
-ToSwitchButtonEventHandler >> checkableCheckEvent: anEvent [
+{ #category : #'event handling' }
+ToSwitchButtonEventHandler >> checkableChangedEvent: anEvent [
 
 	| target |
 	target := anEvent currentTarget.
-	target icon checked: anEvent current
-]
-
-{ #category : #'api - accessing' }
-ToSwitchButtonEventHandler >> eventsToHandle [ 
-
-	^ super eventsToHandle , { ToCheckableCheckEvent }
+	target icon checked: anEvent checked.
+	super checkableChangedEvent: anEvent
 ]

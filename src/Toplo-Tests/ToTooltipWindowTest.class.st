@@ -8,55 +8,67 @@ Class {
 }
 
 { #category : #tests }
+ToTooltipWindowTest >> setUpTooltipWindow [
+
+	| element windowManager |
+	element := ToElement new.
+	element extent: 100 @ 100.
+	element tooltipBuilder: [ :win :request |
+		win root addChild: (ToLabel text: 'Tooltip content') ].
+
+	windowManager := element ensuredTooltipManager.
+	windowManager popupDelay: 10 milliSeconds.
+
+	space deferAndSettle: [ space root addChild: element ].
+
+	element eventSimulator mouseMoveInside.
+	space waitUntilTrue: [
+		windowManager currentWindow notNil and: [
+			windowManager currentWindow isOpened ] ].
+
+	^ windowManager currentWindow
+]
+
+{ #category : #tests }
 ToTooltipWindowTest >> testContent [
 
-	| e windowHandler |
-
-	e := ToElement new  size: 100@100.
-	e tooltipContent: (ToLabel text: 'Tooltip content').
-	windowHandler := e tooltipWindowManager.
-	self assert: (windowHandler isKindOf: ToTooltipWindowManager).
-	space root addChild: e.
-	"self waitTestingSpaces."
-
-	BlSpace simulateMouseMoveInside: e.
-	self waitTestingSpaces.
-	(windowHandler popupDelay + 100 milliSecond ) wait.
-	self waitTestingSpaces.
-
-	self assert: (windowHandler currentWindow root firstChild isKindOf: ToLabel) .
-	self assert: windowHandler currentWindow root firstChild text asString equals: 'Tooltip content' .
-	^  windowHandler currentWindow
+	| tooltipWindow |
+	tooltipWindow := self setUpTooltipWindow.
+	self
+		assert: tooltipWindow root firstChild class
+		equals: ToLabel.
+	self
+		assert: tooltipWindow root firstChild text asString
+		equals: 'Tooltip content'
 ]
 
 { #category : #tests }
 ToTooltipWindowTest >> testCurrentWindow [
 
-	| window |
-	
-	window := self testContent.
-	self assert: window isOpened.
-	self assert: window notNil.
-	self assert: window isOpened.
-
+	| tooltipWindow |
+	tooltipWindow := self setUpTooltipWindow.
+	self
+		assert: tooltipWindow notNil
+		description: 'Tooltip window must be created'.
+	self
+		assert: tooltipWindow isOpened
+		description: 'Tooltip window must be opened'
 ]
 
 { #category : #tests }
 ToTooltipWindowTest >> testDefaultElevation [
 
-	| window |
-	window := self testContent.
+	| tooltipWindow |
+	tooltipWindow := self setUpTooltipWindow.
 	self
-		assert: window  elevation elevation
-		equals: window  defaultElevation elevation
+		assert: tooltipWindow elevation elevation
+		equals: tooltipWindow defaultElevation elevation
 ]
 
 { #category : #tests }
 ToTooltipWindowTest >> testInitialize [
 
-	| w |
-	w := ToTooltipWindow new.
-	self assert: w element isNil.
-	self assert: (w eventDispatcher hasEventHandlerSuchThat: [ :eh |
-			 eh isKindOf: ToTooltipWindowEventHandler ])
+	self
+		deny: ToTooltipWindow new hasManager
+		description: 'New tooltip window must not have a manager'
 ]

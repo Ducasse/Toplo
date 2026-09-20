@@ -21,7 +21,7 @@ ToPrimarySelecterTest >> setUp [
 		            selectionChangedEventClass:
 			            ToListPrimarySelectionChangedEvent;
 		            yourself.
-	selecter commandApplierEventHandler: ToQueueBasedCommandApplierEventHandler new.
+	selecter commandApplicationStrategy: BlQueueBasedCommandApplicationStrategy new.
 	selecter onInstalledIn: element
 ]
 
@@ -34,10 +34,11 @@ ToPrimarySelecterTest >> testAddCommand [
 			 do: [ :event | selChangedEvent := event ]).
 	element selectionModel deselectAll.
 	self assert: element selectionModel isEmpty.
-	selecter addCommand: (cmd := ToWholeSelectionCommand new
-			        operation: ToAddSelectionOperation new;
-			        yourself).
-	self waitTestingSpaces.
+
+	space deferAndSettle: [
+		selecter addCommand: (cmd := ToWholeSelectionCommand new
+				        operation: ToAddSelectionOperation new;
+				        yourself) ].
 	self assert: element selectionModel isNotEmpty.
 	self assert: selChangedEvent notNil
 ]
@@ -46,14 +47,15 @@ ToPrimarySelecterTest >> testAddCommand [
 ToPrimarySelecterTest >> testDeselectTo [
 
 	| cmd |
-	element selectionModel selectIndex: element itemCount + 1.
+	element selectionModel selectOneMoreIndex: element itemCount + 1.
 	self assert: element selectionModel selectedIndexes equals: #( 101 ).
-	selecter addCommand: (cmd := ToIntervalSelectionCommand new
-			        from: 1;
-			        to: element itemCount + 1;
-			        operation: ToRemoveSelectionOperation new;
-			        yourself).
-	self waitTestingSpaces.
+
+	space deferAndSettle: [
+		selecter addCommand: (cmd := ToIntervalSelectionCommand new
+				        from: 1;
+				        to: element itemCount + 1;
+				        operation: ToRemoveSelectionOperation new;
+				        yourself) ].
 	self assert: element selectionModel isEmpty
 ]
 
@@ -63,15 +65,16 @@ ToPrimarySelecterTest >> testDeselectToWithChangedItemCount [
 	| cmd to |
 	to := element itemCount + 1.
 	element selectionModel itemCountGetter: to.
-	element selectionModel selectIndex: to.
+	element selectionModel selectOneMoreIndex: to.
 	self assert: element selectionModel selectedIndexes equals: { to }.
 	element selectionModel itemCountGetter: 0.
 	self assert: element selectionModel itemCount equals: 0.
-	selecter addCommand: (cmd := ToIntervalSelectionCommand new
-			        from: 1;
-			        to: to;
-			        operation: ToRemoveSelectionOperation new;
-			        yourself).
-	self waitTestingSpaces.
+
+	space deferAndSettle: [
+		selecter addCommand: (cmd := ToIntervalSelectionCommand new
+				        from: 1;
+				        to: to;
+				        operation: ToRemoveSelectionOperation new;
+				        yourself) ].
 	self assert: element selectionModel isEmpty
 ]

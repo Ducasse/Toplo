@@ -14,7 +14,7 @@ ToButtonTest >> testButton [
 	self assert: button isHorizontal.
 
 	self assert: button isStartToEnd.
-	self assert: button isEndToStart equals: false.
+	self deny: button isEndToStart.
 
 	self assert: button icon isNil.
 	self assert: button label isNil
@@ -26,108 +26,70 @@ ToButtonTest >> testCheckable [
 	| but handler |
 	but := ToButton new.
 	self deny: but isCheckable.
-	self assert: but rawCheckableData isNil.
-	handler := but rawCheckableEventHandler.
+	self assert: but checkableState isNil.
+	handler := but checkableEventHandler.
 	self assert: handler isNil.
 	but checkable: true.
-	self assert: but rawCheckableData notNil.
-	handler := but rawCheckableEventHandler.
+	self assert: but checkableState notNil.
+	handler := but checkableEventHandler.
 	self assert: handler notNil.
 	self assert: (but eventDispatcher handlers includes: handler).
 	but checkable: false.
-	self assert: but rawCheckableData isNil.
+	self assert: but checkableState isNil.
 	self deny: (but eventDispatcher handlers includes: handler).
-	self assert: but rawCheckableEventHandler isNil
+	self assert: but checkableEventHandler isNil
 ]
 
 { #category : #'click handler' }
 ToButtonTest >> testClickAborted [
 
-	| but count |
+	| button count |
 	count := 0.
-	but := ToButton new.
-	but labelText: 'XXXXX'.
-	but icon: (ToImage inner: (BlElement new
-				  size: 30 @ 30;
+	button := ToButton new.
+	button labelText: 'XXXXX'.
+	button icon: (ToImage inner: (BlElement new
+				  extent: 30 @ 30;
 				  background: Color blue;
 				  yourself)).
-	but matchParent.
-	but whenClickedDo: [ count := count + 1 ].
-	space root addChild: but.
-	BlSpace simulateMouseDownOn: but.
-	BlSpace simulateMouseUpOn: but icon.
-	self waitTestingSpaces.
+	button matchParent.
+	button clickAction: [ count := count + 1 ].
+	space deferAndSettle: [ space root addChild: button ].
+
+	button eventSimulator mouseDown.
+	button icon eventSimulator mouseUp.
 	self assert: count equals: 1.
-	BlSpace simulateMouseDownOn: but icon.
-	BlSpace simulateMouseUpOn: but.
-	self waitTestingSpaces.
+
+	button icon eventSimulator mouseDown.
+	button eventSimulator mouseUp.
 	self assert: count equals: 2.
-	BlSpace simulateMouseDownOn: but label.
-	BlSpace simulateMouseUpOn: but.
-	self waitTestingSpaces.
+
+	button label eventSimulator mouseDown.
+	button eventSimulator mouseUp.
 	self assert: count equals: 3.
-	BlSpace simulateMouseDownOn: but.
-	BlSpace simulateMouseUpOn: but label.
-	self waitTestingSpaces.
-	self assert: count equals: 4.
 
-
-
-
+	button eventSimulator mouseDown.
+	button label eventSimulator mouseUp.
+	self assert: count equals: 4
 ]
 
 { #category : #'click handler' }
 ToButtonTest >> testClickAborted2 [
 
-	| but count |
+	| button count |
 	count := 0.
-	but := ToButton new.
-	but labelText: 'XXXXX'.
-	but icon: (ToImage inner: (BlElement new
-				  size: 30 @ 30;
+	button := ToButton new.
+	button labelText: 'XXXXX'.
+	button icon: (ToImage inner: (BlElement new
+				  extent: 30 @ 30;
 				  background: Color blue;
 				  yourself)).
-	but matchParent.
-	but whenClickedDo: [ count := count + 1 ].
-	space root addChild: but.
-	BlSpace simulateMouseDownOn: but label.
-	BlSpace simulateMouseUpOn: but icon.
-	self waitTestingSpaces.
+	button matchParent.
+	button clickAction: [ count := count + 1 ].
+	space deferAndSettle: [ space root addChild: button ].
+
+	button label eventSimulator mouseDown.
+	button icon eventSimulator mouseUp.
 	self assert: count equals: 1
-]
-
-{ #category : #'click handler' }
-ToButtonTest >> testClickRemovingHandler [
-
-	| but done |
-	but := ToButton new.
-	done := 0.
-	but whenClickedDo: [ done := done + 1 ].
-	but dispatchEvent: BlMouseUpEvent primary asClickEvent.
-	self assert: done equals: 1.
-	but removeClickHandler.
-	but dispatchEvent: BlMouseUpEvent primary asClickEvent.
-	self assert: done equals: 1.
-
-	
-	
-]
-
-{ #category : #'click handler' }
-ToButtonTest >> testClickReplacingHandler [
-
-	| but done |
-	but := ToButton new.
-	done := 0.
-	but whenClickedDo: [ done := done + 1 ].
-	but dispatchEvent: BlMouseUpEvent primary asClickEvent.
-	self assert: done equals: 1.
-	but whenClickedDo: [ done := done + 10 ].
-	but dispatchEvent: BlMouseUpEvent primary asClickEvent.
-	self assert: done equals: 11.
-
-	
-	
 ]
 
 { #category : #'click handler' }
@@ -135,45 +97,82 @@ ToButtonTest >> testClickWhenDisabled [
 
 	| but done |
 	but := ToButton new.
-	but disable.
+	space deferAndSettle: [ but disable ].
 	done := 0.
-	but whenClickedDo: [ done := done +1 ].
-	self assert: done equals: 0.
-	
+	but clickAction: [ done := done +1 ].
+	self assert: done equals: 0
 ]
 
 { #category : #'click handler' }
-ToButtonTest >> testClickWithSimpleHandler [
+ToButtonTest >> testClickWith1Action [
 
 	| but done |
 	but := ToButton new.
+	space deferAndSettle: [ space root addChild: but ].
 	done := 0.
-	but whenClickedDo: [ done := done +1 ].
+	but clickAction: [ done := done + 1 ].
 	but dispatchEvent: BlMouseUpEvent primary asClickEvent.
 	self assert: done equals: 1
-	
 ]
 
 { #category : #'click handler' }
-ToButtonTest >> testClickWithoutHandler [
+ToButtonTest >> testClickWith2Actions [
+
+	| but done link1 link2 |
+	but := ToButton new.
+	space deferAndSettle: [ space root addChild: but ].
+	done := 0.
+	link1 := but newClickAction: [ done := done + 1 ].
+	but dispatchEvent: BlMouseUpEvent primary asClickEvent.
+	self assert: done equals: 1.
+
+	link2 := but newClickAction: [ done := done + 10 ].
+	but dispatchEvent: BlMouseUpEvent primary asClickEvent.
+	self assert: done equals: 12.
+
+	link2 unlink.
+	but dispatchEvent: BlMouseUpEvent primary asClickEvent.
+	self assert: done equals: 13.
+
+	link1 unlink.
+	but dispatchEvent: BlMouseUpEvent primary asClickEvent.
+	self assert: done equals: 13
+]
+
+{ #category : #'click handler' }
+ToButtonTest >> testClickWithoutAction [
 
 	| but |
 	but := ToButton new.
-	but dispatchEvent: BlMouseUpEvent primary asClickEvent.
-	
+	but dispatchEvent: BlMouseUpEvent primary asClickEvent
 ]
 
 { #category : #'click handler' }
-ToButtonTest >> testWhenClickedDo [
+ToButtonTest >> testLinkClickAction [
 
 	| but count |
 	count := 0.
 	but := ToButton new.
 	but matchParent.
-	but whenClickedDo: [ count := count + 1 ].
-	space root addChild: but.
-	BlSpace simulateMouseDownOn: but.
-	BlSpace simulateMouseUpOn: but.
-	self waitTestingSpaces.
+	but clickAction: [ count := count + 1 ].
+	space deferAndSettle: [ space root addChild: but ].
+	but eventSimulator mouseDown.
+	but eventSimulator mouseUp.
 	self assert: count equals: 1
+]
+
+{ #category : #'click handler' }
+ToButtonTest >> testRemoveClickAction [
+
+	| but done link |
+	but := ToButton new.
+	space deferAndSettle: [ space root addChild: but ].
+	done := 0.
+	link := but newClickAction: [ done := done + 1 ].
+	but dispatchEvent: BlMouseUpEvent primary asClickEvent.
+	self assert: done equals: 1.
+
+	link unlink.
+	but dispatchEvent: BlMouseUpEvent primary asClickEvent.
+	self assert: done equals: 1
 ]

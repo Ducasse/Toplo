@@ -1,20 +1,33 @@
 Class {
 	#name : #ToButton,
 	#superclass : #ToGeneralButton,
-	#traits : 'TToElementWithLabeledIcon + TToCheckable',
-	#classTraits : 'TToElementWithLabeledIcon classTrait + TToCheckable classTrait',
-	#instVars : [
-		'labeledIcon',
-		'optCheckableData'
-	],
-	#category : #'Toplo-Widget-Button-Core'
+	#traits : 'TToTripletContainer + TToTripletElement + TToLabeledIcon + TToCheckable + TToOrientable + TToDirectional',
+	#classTraits : 'TToTripletContainer classTrait + TToTripletElement classTrait + TToLabeledIcon classTrait + TToCheckable classTrait + TToOrientable classTrait + TToDirectional classTrait',
+	#category : #'Toplo-Widget-Button-Clickable'
 }
+
+{ #category : #'t - labeled icon' }
+ToButton class >> labelText: aTextOrString [
+
+	^ self new
+		  labelText: aTextOrString;
+		  yourself
+]
+
+{ #category : #'t - labeled icon' }
+ToButton class >> labelText: aTextOrString icon: anImage [
+
+	^ self new
+		  labelText: aTextOrString;
+		  icon: anImage;
+		  yourself
+]
 
 { #category : #configuration }
 ToButton >> beCheckable [
 
 	self isCheckable ifTrue: [ ^ self ].
-	self initializeCheckable.
+	self initializeAsCheckable.
 	self requestNewSkin
 ]
 
@@ -23,7 +36,7 @@ ToButton >> beNotCheckable [
 
 	self isCheckable ifFalse: [ ^ self ].
 	self releaseCheckable.
-	optCheckableData := nil.
+	self checkableState: nil.
 	self requestNewSkin
 ]
 
@@ -36,23 +49,10 @@ ToButton >> checkable: aBoolean [
 ]
 
 { #category : #initialization }
-ToButton >> initialize [
+ToButton >> initialize [ 
 
 	super initialize.
-	labeledIcon := ToLabeledIcon new.
-	self addChild: labeledIcon.
-	labeledIcon constraintsDo: [ :c |
-		c linear vertical alignCenter.
-		c linear horizontal alignCenter.
-		c frame vertical alignCenter.
-		c frame horizontal alignCenter ].
-	self fitContent
-]
-
-{ #category : #'t - element with labeled icon - accessing' }
-ToButton >> labeledIcon [ 
-
-	^ labeledIcon
+	self initializeAsTripletElement
 ]
 
 { #category : #skin }
@@ -63,14 +63,8 @@ ToButton >> newRawSkin [
 		  ifFalse: [ ToButtonSkin new ]
 ]
 
-{ #category : #'t - checkable - accessing' }
-ToButton >> rawCheckableData [
+{ #category : #configuration }
+ToButton >> newToConfiguration [ 
 
-	^ optCheckableData 
-]
-
-{ #category : #'t - checkable - accessing' }
-ToButton >> rawCheckableData: aCheckableData [
-
-	optCheckableData := aCheckableData
+	^ ToTripletElementConfiguration new
 ]

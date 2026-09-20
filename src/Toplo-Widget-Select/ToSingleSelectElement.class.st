@@ -4,41 +4,75 @@ Class {
 	#category : #'Toplo-Widget-Select-Single'
 }
 
+{ #category : #testing }
+ToSingleSelectElement >> allowDeselection [
+
+	^ self popupListElement primarySelectionMode deselectOnPressed
+]
+
+{ #category : #accessing }
+ToSingleSelectElement >> allowDeselection: aBoolean [
+
+	self popupListElement primarySelectionMode deselectOnPressed:
+		aBoolean
+]
+
+{ #category : #accessing }
+ToSingleSelectElement >> dataView [
+	" return the element containing the selection result "
+
+	^ self innerElement dataView
+]
+
 { #category : #accessing }
 ToSingleSelectElement >> dataViewBuilder: aValuable [
 	" aValuable takes 2 args: the dataItemView and the selected dataItem "
 
-	self innerContainer dataViewBuilder: aValuable
+	self innerElement dataViewBuilder: aValuable
 ]
 
 { #category : #accessing }
 ToSingleSelectElement >> dataViewFactory: aValuable [
 
-	self innerContainer dataViewFactory: aValuable
+	self innerElement dataViewFactory: aValuable
 ]
 
 { #category : #initialization }
 ToSingleSelectElement >> defaultDataViewBuilder [
 
 	^ [ :theView :theDataItem |
-	  theView selectedDataTextField text:
-		  (theDataItem ifNil: [ '' ] ifNotNil: [ :d | d asString ]) asRopedText ]
+		theView addChild: (ToLabel text: theDataItem asString) ]
 ]
 
 { #category : #initialization }
 ToSingleSelectElement >> defaultDataViewFactory [
 
-	^ [ :container | ToSingleSelectDataItemView new ]
-]
-
-{ #category : #accessing }
-ToSingleSelectElement >> fakeDataItem: aData [
-
-	self innerContainer fakeDataItem: aData
+	^ [ :container | ToSingleSelectHeaderDataItemView new ]
 ]
 
 { #category : #'instance creation' }
-ToSingleSelectElement >> innerContainerClass [
+ToSingleSelectElement >> innerElementClass [
 
-	^ ToSingleSelectInnerContainerElement
+	^ ToSingleSelectHeaderElement
+]
+
+{ #category : #'instance creation' }
+ToSingleSelectElement >> newPopupWindowManager [
+
+	^ ToSingleSelectPopupWindowManager new
+]
+
+{ #category : #accessing }
+ToSingleSelectElement >> selectedDataItem [
+
+	^ self selectedDataItems ifEmpty: [ ] ifNotEmpty: [ :s | s first ]
+]
+
+{ #category : #private }
+ToSingleSelectElement >> showHidePlaceholder [
+	" show the placeholder in case no item is selected  "
+
+	self selectedDataItem ifNil: [
+		^ self header showPlaceholder ].
+	self header hidePlaceholder
 ]

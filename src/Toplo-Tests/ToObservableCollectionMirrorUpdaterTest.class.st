@@ -21,25 +21,9 @@ ToObservableCollectionMirrorUpdaterTest >> setUp [
 ]
 
 { #category : #'tests - adding' }
-ToObservableCollectionMirrorUpdaterTest >> testAdd [
-
-	ocol add: 88.
-	self
-		assert: mirror asOrderedCollection
-		equals: #( 88 ) asOrderedCollection.
-	ocol add: 99.
-	self
-		assert: mirror asOrderedCollection
-		equals: #( 88 99 ) asOrderedCollection
-]
-
-{ #category : #'tests - adding' }
 ToObservableCollectionMirrorUpdaterTest >> testAddAfter [
 
 	| i |
-	mirror addEventHandler: (BlEventHandler
-			 on: ToCollectionAllUpdatedEvent
-			 do: [ :ann | i := ann interval ]).
 	mirror addEventHandler: (BlEventHandler
 			 on: ToCollectionAddEvent 
 			 do: [ :ann | i := ann interval ]).
@@ -67,7 +51,10 @@ ToObservableCollectionMirrorUpdaterTest >> testAddAfter [
 ToObservableCollectionMirrorUpdaterTest >> testAddAfterIndex [
 
 	ocol addAll: #( 1 2 3 4 ).
+	self assert: ocol asArray equals: #(1 2 3 4).
+	self assert: mirror asArray equals: #(1 2 3 4).
 	ocol add: 77 afterIndex: 0.
+	self assert: ocol asArray equals: #(77 1 2 3 4).
 	self assert: mirror asArray equals: #(77 1 2 3 4).
 	ocol add: 88 afterIndex: 2.
 	self assert: mirror asArray equals: #(77 1 88 2 3 4).
@@ -226,6 +213,19 @@ ToObservableCollectionMirrorUpdaterTest >> testAtPut [
 	self assert: mirror asArray equals: #(1 5 3 4).
 	self should: [ ocol at: 5 put: 8 ] raise: Error.
 	self deny: mirror asArray equals: #(1 5 3 4 8)
+]
+
+{ #category : #'tests - adding' }
+ToObservableCollectionMirrorUpdaterTest >> testRegisterActionLink [
+
+	ocol add: 88.
+	self
+		assert: mirror asOrderedCollection
+		equals: #( 88 ) asOrderedCollection.
+	ocol add: 99.
+	self
+		assert: mirror asOrderedCollection
+		equals: #( 88 99 ) asOrderedCollection
 ]
 
 { #category : #'tests - removing' }

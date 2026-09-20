@@ -7,43 +7,73 @@ Class {
 	#category : #'Toplo-Tests-Core'
 }
 
-{ #category : #tests }
-TToElementWithTooltipTest >> testCloseTooltipWindowOnMouseLeave [
+{ #category : #helpers }
+TToElementWithTooltipTest >> newElementWithTooltip [
 
 	| e |
 	e := ToElement new.
-	e size: 50@50.
-	e tooltipPopupDelay: 10 milliSeconds.
-	space root addChild: e.
-	self assert: e currentTooltipWindow isNil.
-	e tooltipContent: (ToElement new size: 20@20; yourself).
-	BlSpace simulateMouseMoveInside: e.
-	BlSpace pulseUntilEmptyTaskQueue: space timeout: 11 milliSeconds.
-	self assert: e currentTooltipWindow notNil.
-	BlSpace simulateMouseMoveOutside: e.
-	self assert: e currentTooltipWindow isNil.
-
+	e tooltip: [ :win :theRequest | win root addChild: BlElement new ].
+	e rawTooltipManager createNewWindowOnEvent: nil.
 	^ e
 ]
 
 { #category : #tests }
-TToElementWithTooltipTest >> testCloseTooltipWindowOnMouseLeave2 [
+TToElementWithTooltipTest >> testCloseTooltipOnMouseLeave [
 
 	| e |
 	e := ToElement new.
-	e size: 50@50.
-	e closeTooltipWindowOnMouseLeave: false.
-	e tooltipPopupDelay: 10 milliSeconds.
-	space root addChild: e.
-	self assert: e currentTooltipWindow isNil.
-	e tooltipContent: (ToElement new size: 20@20; yourself).
-	BlSpace simulateMouseMoveInside: e.
-	BlSpace pulseUntilEmptyTaskQueue: space timeout: 11 milliSeconds.
-	self assert: e currentTooltipWindow notNil.
-	BlSpace simulateMouseMoveOutside: e.
-	self assert: e currentTooltipWindow notNil.
+	e extent: 50 @ 50.
+	e tooltipManagerDo: [ :m | m popupDelay: 10 milliSeconds ].
+	space deferAndSettle: [ space root addChild: e ].
+	self
+		assert: e currentTooltipWindow isNil
+		description: 'Tooltip window must be nil before opening'.
 
-	^ e
+	e tooltipBuilder: [ :win :request |
+			win root addChild: (ToElement new
+					 extent: 20 @ 20;
+					 yourself) ].
+	e eventSimulator mouseMoveInside.
+	space waitUntilTrue: [ e currentTooltipWindow notNil ].
+	self
+		assert: e currentTooltipWindow notNil
+		description: 'Tooltip window must open on mouse move inside'.
+
+	e eventSimulator mouseMoveOutside.
+	space waitUntilTrue: [ e currentTooltipWindow isNil ].
+	self
+		assert: e currentTooltipWindow isNil
+		description: 'Tooltip window must close on mouse move outside'
+]
+
+{ #category : #tests }
+TToElementWithTooltipTest >> testCloseTooltipOnMouseLeave2 [
+
+	| e |
+	e := ToElement new.
+	e extent: 50 @ 50.
+	e tooltipManagerDo: [ :m | m closeOnLeaved: false ].
+	e tooltipManagerDo: [ :m | m popupDelay: 10 milliSeconds ].
+	space deferAndSettle: [ space root addChild: e ].
+	self
+		assert: e currentTooltipWindow isNil
+		description: 'Tooltip window must be nil before opening'.
+
+	e tooltipBuilder: [ :win :request |
+			win root addChild: (ToElement new
+					 extent: 20 @ 20;
+					 yourself) ].
+	e eventSimulator mouseMoveInside.
+	space waitUntilTrue: [ e currentTooltipWindow notNil ].
+	self
+		assert: e currentTooltipWindow notNil
+		description: 'Tooltip window must open on mouse move inside'.
+
+	e eventSimulator mouseMoveOutside.
+	space waitForDuration: 50 milliSeconds.
+	self
+		assert: e currentTooltipWindow notNil
+		description: 'Tooltip window must remain open when closeOnLeaved is false'
 ]
 
 { #category : #tests }
@@ -51,15 +81,50 @@ TToElementWithTooltipTest >> testCurrentTooltipWindow [
 
 	| e |
 	e := ToElement new.
-	e tooltipContent: ToElement new.
-	self assert: e hasTooltip.
-	self assert: e currentTooltipWindow isNil.
-	e newTooltipWindowEvent: nil.
-	self assert: e currentTooltipWindow notNil.
+	e tooltipBuilder: [ :win :request | win root addChild: ToElement new ].
+	self
+		assert: e hasTooltip
+		description: 'Element must have tooltip after installing builder'.
+	self
+		assert: e currentTooltipWindow isNil
+		description: 'Tooltip window must be nil before window creation'.
+
+	e rawTooltipManager createNewWindowOnEvent: nil.
+	self
+		assert: e currentTooltipWindow notNil
+		description: 'Tooltip window must exist after creation'.
 	self
 		assert: e currentTooltipWindow class
-		equals: e tooltipWindowManager windowClass.
-	^ e
+		equals: e ensuredTooltipManager windowClass
+]
+
+{ #category : #tests }
+TToElementWithTooltipTest >> testEnsuredTooltipManager [
+
+	| e |
+	e := ToElement new.
+	self
+		assert: e currentTooltipWindow isNil
+		description: 'New element must have no current tooltip window'.
+	self
+		assert: e rawTooltipManager isNil
+		description: 'New element must have no raw tooltip manager'.
+
+	e tooltip: [ :win :theRequest | win root addChild: ToElement new ].
+	self
+		assert: e hasTooltip
+		description: 'Element must have tooltip after setting tooltip'.
+	self
+		assert: e rawTooltipManager notNil
+		description: 'Raw tooltip manager must exist after setting tooltip'.
+
+	e rawTooltipManager createNewWindowOnEvent: nil.
+	self
+		assert: e ensuredTooltipManager currentWindow notNil
+		description: 'Current window must exist after creation'.
+	self
+		assert: e ensuredTooltipManager anchorElement
+		identicalTo: e
 ]
 
 { #category : #tests }
@@ -67,86 +132,124 @@ TToElementWithTooltipTest >> testHasOpenedTooltip [
 
 	| e |
 	e := ToElement new.
-	e tooltipContent: ToElement new.
-	self assert: e hasOpenedTooltip not.
-	self assert: e currentTooltipWindow isNil.
-	e newTooltipWindowEvent: nil.
-	self assert: e hasOpenedTooltip.
-	self assert: e currentTooltipWindow notNil.
+	e tooltipBuilder: [ :win :request | win root addChild: ToElement new ].
+	self
+		assert: e currentTooltipWindow isNil
+		description: 'Tooltip window must be nil before window creation'.
+
+	e rawTooltipManager createNewWindowOnEvent: nil.
+	self
+		assert: e currentTooltipWindow notNil
+		description: 'Tooltip window must exist after window creation'.
 	self
 		assert: e currentTooltipWindow class
-		equals: e tooltipWindowManager windowClass.
-	^ e
+		equals: e ensuredTooltipManager windowClass
 ]
 
 { #category : #tests }
 TToElementWithTooltipTest >> testHasTooltip [
 
-	|  e  |
+	| e |
 	e := ToElement new.
-	self assert: e hasTooltip not.
-	self should: [e newTooltipWindowEvent: nil] raise: Error.
-	self assert: (e eventDispatcher hasEventHandlerSuchThat: [ :eh |
-			 eh isKindOf: ToElementWithTooltipEventHandler ]) not.
-	e tooltipContent: ToElement new.
-	self assert: e hasTooltip.
-	^ e
+	self
+		assert: e hasTooltip not
+		description: 'New element must not have tooltip'.
+	self
+		should: [ e rawTooltipManager createNewWindowOnEvent: nil ]
+		raise: Error.
+
+	e tooltipBuilder: [ :win :request | win root addChild: ToElement new ].
+	self
+		assert: e hasTooltip
+		description: 'Element must have tooltip after installing builder'
 ]
 
 { #category : #tests }
-TToElementWithTooltipTest >> testNewTooltipWindowEvent [
+TToElementWithTooltipTest >> testNewTooltipOnEvent [
 
 	| e |
 	e := ToElement new.
-	self assert: e currentTooltipWindow isNil.
-	self assert: e rawTooltipWindowManager isNil.
-	self should: [ e newTooltipWindowEvent: nil ] raise: Error.
-	e tooltipContent: ToElement new.
-	self assert: e hasTooltip.
-	self assert: e rawTooltipWindowManager notNil.
-	e newTooltipWindowEvent: nil.
-	self assert: e tooltipWindowManager currentWindow notNil.
-	self assert: e currentTooltipWindow identicalTo: e tooltipWindowManager currentWindow.
-	^ e
+	self
+		assert: e currentTooltipWindow isNil
+		description: 'New element must have no current tooltip window'.
+	self
+		assert: e rawTooltipManager isNil
+		description: 'New element must have no raw tooltip manager'.
+	self
+		should: [ e rawTooltipManager createNewWindowOnEvent: nil ]
+		raise: Error.
+
+	e tooltipBuilder: [ :win :request | win root addChild: ToElement new ].
+	self
+		assert: e hasTooltip
+		description: 'Element must have tooltip after installing builder'.
+	self
+		assert: e rawTooltipManager notNil
+		description: 'Raw tooltip manager must exist after installing builder'.
+
+	e rawTooltipManager createNewWindowOnEvent: nil.
+	self
+		assert: e ensuredTooltipManager currentWindow notNil
+		description: 'Current window must exist after creation'.
+	self
+		assert: e currentTooltipWindow
+		identicalTo: e ensuredTooltipManager currentWindow
 ]
 
 { #category : #tests }
-TToElementWithTooltipTest >> testRawTooltipWindowManager [
+TToElementWithTooltipTest >> testRawTooltipManager [
 
 	| e |
 	e := ToElement new.
-	self assert: e rawTooltipWindowManager isNil.
-	e tooltipContent: ToElement new.
-	self assert: e rawTooltipWindowManager notNil.
-	e removeTooltipWindowManager.
-	self assert: e rawTooltipWindowManager isNil.
+	self
+		assert: e rawTooltipManager isNil
+		description: 'New element must have no raw tooltip manager'.
 
+	e tooltipBuilder: [ :win :request | win root addChild: ToElement new ].
+	self
+		assert: e rawTooltipManager notNil
+		description: 'Raw tooltip manager must exist after installing builder'.
+
+	e removeTooltipManager.
+	self
+		assert: e rawTooltipManager isNil
+		description: 'Raw tooltip manager must be nil after removal'
 ]
 
 { #category : #tests }
 TToElementWithTooltipTest >> testRemoveTooltip [
 
-	|  e  |
-	e := self testTooltip.
-	self assert: e hasTooltip.
+	| e |
+	e := self newElementWithTooltip.
+	self
+		assert: e hasTooltip
+		description: 'Element must have tooltip'.
+
 	e removeTooltip.
-	self assert: (e eventDispatcher hasEventHandlerSuchThat: [ :eh |
-			 eh isKindOf: ToElementWithTooltipEventHandler ]) not.
-	self assert: e currentTooltipWindow isNil.
-	self assert: e hasTooltip not.
-	^ e
+	self
+		assert: e currentTooltipWindow isNil
+		description: 'Current tooltip window must be nil after removing tooltip'.
+	self
+		assert: e hasTooltip not
+		description: 'Element must not have tooltip after removing tooltip'
 ]
 
 { #category : #tests }
-TToElementWithTooltipTest >> testRemoveTooltipWindowManager [
+TToElementWithTooltipTest >> testRemoveTooltipManager [
 
 	| e |
-	e := self testTooltip.
-	self assert: e hasTooltip.
-	self assert: (e userData includesKey: #tooltipWindowManager).
-	e removeTooltipWindowManager.
-	self deny: (e userData includesKey: #tooltipWindowManager).
-	^ e
+	e := self newElementWithTooltip.
+	self
+		assert: e hasTooltip
+		description: 'Element must have tooltip'.
+	self
+		assert: (e userData includesKey: #tooltipManager)
+		description: 'User data must contain tooltipManager key'.
+
+	e removeTooltipManager.
+	self
+		deny: (e userData includesKey: #tooltipManager)
+		description: 'User data must not contain tooltipManager key after removal'
 ]
 
 { #category : #tests }
@@ -155,16 +258,25 @@ TToElementWithTooltipTest >> testTooltip [
 	| tt e ttwin |
 	tt := BlElement new.
 	e := ToElement new.
-	self assert: e hasTooltip not.
-	e tooltip: [:win :theRequest | win root addChild: tt].
-	self assert: e hasTooltip.
-	ttwin := e newTooltipWindowEvent: nil.
-	self assert: e currentTooltipWindow identicalTo: ttwin.
-	self assert: ttwin root firstChild identicalTo: tt.
-	self assert: ttwin element identicalTo: e.
-	self assert: (e eventDispatcher hasEventHandlerSuchThat: [ :eh |
-			 eh isKindOf: ToElementWithTooltipEventHandler ]).
-	^ e
+	self
+		assert: e hasTooltip not
+		description: 'New element must not have tooltip'.
+
+	e tooltip: [ :win :theRequest | win root addChild: tt ].
+	self
+		assert: e hasTooltip
+		description: 'Element must have tooltip after configuration'.
+
+	ttwin := e rawTooltipManager createNewWindowOnEvent: nil.
+	self
+		assert: e currentTooltipWindow
+		identicalTo: ttwin.
+	self
+		assert: ttwin root firstChild
+		identicalTo: tt.
+	self
+		assert: ttwin anchorElement
+		identicalTo: e
 ]
 
 { #category : #tests }
@@ -174,26 +286,17 @@ TToElementWithTooltipTest >> testTooltipBuilder [
 	e := ToElement new.
 	b := [ :win :theRequest | win root addChild: ToElement new ].
 	e tooltipBuilder: b.
-	self assert: e rawTooltipWindowManager notNil.
-	self assert: e rawTooltipWindowManager builder identicalTo: b.
-	e removeTooltipWindowManager.
-	self assert: e rawTooltipWindowManager isNil
-]
+	self
+		assert: e rawTooltipManager notNil
+		description: 'Raw tooltip manager must exist after setting builder'.
+	self
+		assert: e rawTooltipManager windowBuilder
+		identicalTo: b.
 
-{ #category : #tests }
-TToElementWithTooltipTest >> testTooltipContent [
-
-	|  e ttwin |
-	e := self testTooltip.
-	self assert: e hasTooltip.
-	self assert: e tooltipWindowManager currentWindow notNil.
-	ttwin := e tooltipWindowManager currentWindow.
-	self assert: ttwin root firstChild notNil.
-	e tooltipContent: nil.
-	self assert: e currentTooltipWindow isNil.
-	self assert: e hasTooltip not.
-
-	^ e
+	e removeTooltipManager.
+	self
+		assert: e rawTooltipManager isNil
+		description: 'Raw tooltip manager must be nil after removal'
 ]
 
 { #category : #tests }
@@ -201,20 +304,51 @@ TToElementWithTooltipTest >> testTooltipPopupDelay [
 
 	| e |
 	e := ToElement new.
-	e size: 50@50.
-	e tooltipPopupDelay: 100 milliSeconds.
-	self assert: e tooltipPopupDelay equals: 100 milliSeconds.
-	space root addChild: e.
-	e tooltipContent: (ToElement new size: 20@20; yourself).
-	BlSpace simulateMouseMoveInside: e.
-	BlSpace pulseUntilEmptyTaskQueue: space timeout: 50 milliSeconds.
-	BlSpace simulateMouseMoveOutside: e.
-	self assert: e currentTooltipWindow isNil.
-	BlSpace simulateMouseMoveInside: e.
-	BlSpace pulseUntilEmptyTaskQueue: space timeout: 101 milliSeconds.
-	self assert: e currentTooltipWindow notNil.
+	e extent: 50 @ 50.
 
-	^ e
+	"Set the delay threshold after which the tooltip opens"
+	e tooltipManagerDo: [ :m |
+		m popupDelay: 300 milliSeconds.
+		self assert: m popupDelay equals: 300 milliSeconds ].
+
+	space deferAndSettle: [
+		space root addChild: e.
+		e tooltipBuilder: [ :win :request |
+			win root addChild: (ToElement new
+					 extent: 20 @ 20;
+					 yourself) ] ].
+
+	"Hovering starts the delay countdown; the tooltip must not appear immediately"
+	e eventSimulator mouseMoveInside.
+	self
+		assert: e currentTooltipWindow isNil
+		description: 'Tooltip must not open immediately upon mouse enter'.
+
+	"After a little wait, the tooltip must still not be opened"
+	space waitForDuration: 20 milliSeconds.
+	self
+		assert: e currentTooltipWindow isNil
+		description: 'Tooltip must remain closed before popupDelay elapses'.
+
+	"Once the delay elapses, the tooltip window opens"
+	space waitUntilTrue: [ e currentTooltipWindow notNil ].
+	self
+		assert: e currentTooltipWindow notNil
+		description: 'Tooltip must open after popupDelay elapses'.
+
+	"Moving the mouse outside closes the tooltip"
+	e eventSimulator mouseMoveOutside.
+	space waitUntilTrue: [ e currentTooltipWindow isNil ].
+	self
+		assert: e currentTooltipWindow isNil
+		description: 'Tooltip must close upon mouse move outside'.
+
+	"Re-entering the element starts a new delay cycle and opens the tooltip again"
+	e eventSimulator mouseMoveInside.
+	space waitUntilTrue: [ e currentTooltipWindow notNil ].
+	self
+		assert: e currentTooltipWindow notNil
+		description: 'Tooltip must open again on re-entering element'
 ]
 
 { #category : #tests }
@@ -224,12 +358,22 @@ TToElementWithTooltipTest >> testTooltipRequestEvent [
 	| tt e ttwin request |
 	tt := BlElement new.
 	e := ToElement new.
-	self assert: e hasTooltip not.
-	e tooltip: [:win :theRequest | win root addChild: tt. request := theRequest].
-	self assert: e hasTooltip.
-	ttwin := e newTooltipWindowEvent: nil.
-	self assert: request class identicalTo: ttwin manager windowOpenRequestClass.
-	self assert: request target identicalTo: e
+	self
+		deny: e hasTooltip
+		description: 'New element must not have tooltip'.
+
+	e tooltip: [ :win :theRequest | win root addChild: tt. request := theRequest ].
+	self
+		assert: e hasTooltip
+		description: 'Element must have tooltip after configuration'.
+
+	ttwin := e rawTooltipManager createNewWindowOnEvent: nil.
+	self
+		assert: request class
+		identicalTo: ttwin manager windowRequestClass.
+	self
+		assert: request target
+		identicalTo: e
 ]
 
 { #category : #tests }
@@ -238,13 +382,22 @@ TToElementWithTooltipTest >> testTooltipString [
 	| tt e ttwin |
 	tt := BlElement new.
 	e := ToElement new.
-	self assert: e hasTooltip not.
+	self
+		assert: e hasTooltip not
+		description: 'New element must not have tooltip'.
+
 	e tooltipString: 'X'.
-	self assert: e hasTooltip.
-	ttwin := e newTooltipWindowEvent: nil.
-	self assert: ttwin root firstChild notNil.
-	self assert: ttwin root firstChild text asString equals: 'X'.
-	^ e
+	self
+		assert: e hasTooltip
+		description: 'Element must have tooltip after setting tooltipString'.
+
+	ttwin := e rawTooltipManager createNewWindowOnEvent: nil.
+	self
+		assert: ttwin root firstChild notNil
+		description: 'Tooltip window must contain a child'.
+	self
+		assert: ttwin root firstChild text asString
+		equals: 'X'
 ]
 
 { #category : #tests }
@@ -253,28 +406,23 @@ TToElementWithTooltipTest >> testTooltipText [
 	| tt e ttwin |
 	tt := BlElement new.
 	e := ToElement new.
-	self assert: e hasTooltip not.
-	e tooltipText: ('X' asRopedText).
-	self assert: e hasTooltip.
-	ttwin := e newTooltipWindowEvent: nil.
-	self assert: ttwin root firstChild notNil.
-	self assert: (ttwin root firstChild isKindOf: ToLabel).
-	self assert: ttwin root firstChild text asString equals: 'X' asRopedText asString.
-	^ e
-]
+	self
+		assert: e hasTooltip not
+		description: 'New element must not have tooltip'.
 
-{ #category : #tests }
-TToElementWithTooltipTest >> testTooltipWindowManager [
+	e tooltipText: 'X' asRopedText.
+	self
+		assert: e hasTooltip
+		description: 'Element must have tooltip after setting tooltipText'.
 
-	| e |
-	e := ToElement new.
-	self assert: e currentTooltipWindow isNil.
-	self assert: e rawTooltipWindowManager isNil.
-	e tooltip: [:win :theRequest | win root addChild: ToElement new].
-	self assert: e hasTooltip.
-	self assert: e rawTooltipWindowManager notNil.
-	e newTooltipWindowEvent: nil.
-	self assert: e tooltipWindowManager currentWindow notNil.
-	self assert: e tooltipWindowManager element identicalTo: e.
-	^ e
+	ttwin := e rawTooltipManager createNewWindowOnEvent: nil.
+	self
+		assert: ttwin root firstChild notNil
+		description: 'Tooltip window must contain a child'.
+	self
+		assert: (ttwin root firstChild isKindOf: ToLabel)
+		description: 'Tooltip content child must be a ToLabel'.
+	self
+		assert: ttwin root firstChild text asString
+		equals: 'X' asRopedText asString
 ]

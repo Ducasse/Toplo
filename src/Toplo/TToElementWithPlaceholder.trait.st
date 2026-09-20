@@ -4,49 +4,10 @@ Trait {
 }
 
 { #category : #'t - element with placeholder' }
-TToElementWithPlaceholder >> currentPlaceholderLayer [
-
-	^ self userData at: #currentPlaceholderLayer ifAbsent: [  ]
-]
-
-{ #category : #'t - element with placeholder' }
-TToElementWithPlaceholder >> hasPlaceholderMinHeight [
-
-	^ self userData includesKey: #placeholderMinHeight
-]
-
-{ #category : #'t - element with placeholder' }
-TToElementWithPlaceholder >> hasPlaceholderMinWidth [
-
-	^ self userData includesKey: #placeholderMinWidth
-]
-
-{ #category : #'t - element with placeholder' }
 TToElementWithPlaceholder >> hidePlaceholder [
 
-	self currentPlaceholderLayer ifNil: [ ^ self ].
-	self currentPlaceholderLayer detach.
-	self removeChild: self currentPlaceholderLayer.
-	self dispatchEvent: (ToPlaceholderHiddenEvent new
-			 placeholder: self currentPlaceholderLayer;
-			 yourself).
-	self userData removeKey: #currentPlaceholderLayer
-]
-
-{ #category : #'t - element with placeholder' }
-TToElementWithPlaceholder >> isShowingPlaceholder [
-
-	^ self currentPlaceholderLayer notNil
-]
-
-{ #category : #'t - element with placeholder' }
-TToElementWithPlaceholder >> isShowingPlaceholder: aBoolean [
-
-	self isShowingPlaceholder = aBoolean ifTrue: [ ^ self ].
-
-	aBoolean
-		ifTrue: [ self showPlaceholder ]
-		ifFalse: [ self hidePlaceholder ]
+	self placeholderLayer ifNotNil: [ :ph |
+		ph visibility: BlVisibility gone ]
 ]
 
 { #category : #'t - element with placeholder' }
@@ -58,9 +19,21 @@ TToElementWithPlaceholder >> newPlaceholder [
 { #category : #'t - element with placeholder' }
 TToElementWithPlaceholder >> placeholderBuilder: aValuable [
 
-	" aValuable takes 2 args: 1 the placeholder to build, 2 the element. 
-	If nil, the current builder is removed"
-	self rawPlaceholderBuilder: aValuable 
+	| ph |
+	ph := self placeholderLayer.
+	ph ifNotNil: [
+			ph detachFromParent ].
+	aValuable ifNil: [ ^ self ].
+	ph := self newPlaceholder.
+	self userData at: #placeholder put: ph.
+	ph id: #toploPlaceholder.
+	ph addEventHandlerOn: ToAddedToSpaceEvent do: [ :event |
+			ph padding: self padding.
+			ph margin: self margin ].
+	aValuable value: ph value: self.
+	ph visibility: BlVisibility gone.
+	ph attachToParent: self.
+	ph elevation: self placeholderElevation
 ]
 
 { #category : #'t - element with placeholder' }
@@ -76,93 +49,46 @@ TToElementWithPlaceholder >> placeholderElevation [
 ]
 
 { #category : #'t - element with placeholder' }
-TToElementWithPlaceholder >> placeholderEventHandler [
+TToElementWithPlaceholder >> placeholderLayer [
 
-	^ self userData at: #placeholderEventHandler ifAbsent: [  ]
+	^ self userData at: #placeholder ifAbsent: [  ]
 ]
 
 { #category : #'t - element with placeholder' }
-TToElementWithPlaceholder >> placeholderEventHandler: anEventHandler [
+TToElementWithPlaceholder >> placeholderString: aString [
+	"Syntactic sugar to set a string has a placeholder message"
 
-	^ self userData at: #placeholderEventHandler put: anEventHandler
-]
+	aString ifNil: [
+		self placeholderBuilder: nil.
+		^ self ].
 
-{ #category : #'t - element with placeholder' }
-TToElementWithPlaceholder >> placeholderMinHeight [
-
-	^ self userData at: #placeholderMinHeight ifAbsent: [ 0 ]
-]
-
-{ #category : #'t - element with placeholder' }
-TToElementWithPlaceholder >> placeholderMinHeight: aNumber [
-
-	^ self userData at: #placeholderMinHeight put: aNumber
-]
-
-{ #category : #'t - element with placeholder' }
-TToElementWithPlaceholder >> placeholderMinWidth [
-
-	^ self userData at: #placeholderMinWidth ifAbsent: [ 0 ]
-]
-
-{ #category : #'t - element with placeholder' }
-TToElementWithPlaceholder >> placeholderMinWidth: aNumber [
-
-	^ self userData at: #placeholderMinWidth put: aNumber
+	self placeholderBuilder: [ :placeholder :e | 
+		| lab |
+		lab := ToLabel text: aString.
+		lab multiLine: true.
+		lab constraintsDo: [ :c | c linear vertical alignCenter ].
+		placeholder addChild: lab ]
 ]
 
 { #category : #'t - element with placeholder' }
 TToElementWithPlaceholder >> placeholderText: aText [
-	"Syntaxic sugar to set a string has a placeholder message"
+	"Syntactic sugar to set a string has a placeholder message"
 
-	aText ifNil: [ self placeholderBuilder: nil.
+	aText ifNil: [
+		self placeholderBuilder: nil.
 		^ self ].
 
-	self placeholderBuilder: [ :placeholder :e |
-		placeholder padding: e padding.
+	self placeholderBuilder: [ :placeholder :theElement |
 		placeholder addChild: (ToAttributedLabel new
 				 text: aText;
 				 yourself) ]
 ]
 
 { #category : #'t - element with placeholder' }
-TToElementWithPlaceholder >> rawPlaceholderBuilder [
-
-	" if not nil, a valuable that takes 2 args: 1 the placeholder to build, 2 the element"
-	
-	^ self userData at: #placeholderBuilder ifAbsent: [  ]
-]
-
-{ #category : #'t - element with placeholder' }
-TToElementWithPlaceholder >> rawPlaceholderBuilder: aValuable [
-	" aValuaable takes 2 args: 1 the placeholder to build, 2 the element. If nil, the current builder is removed"
-
-	aValuable ifNil: [
-		self isShowingPlaceholder ifTrue: [ self hidePlaceholder ].
-		self userData removeKey: #placeholderBuilder ifAbsent: [  ].
-		self placeholderEventHandler ifNotNil: [ :handler |
-			self removeEventHandler: handler.
-			self placeholderEventHandler: nil ].
-		^ self ].
-	self userData at: #placeholderBuilder put: aValuable.
-	aValuable ifNotNil: [
-		self placeholderEventHandler:
-			ToElementWithPlaceholderEventHandler new.
-		self addEventHandler: self placeholderEventHandler ]
-]
-
-{ #category : #'t - element with placeholder' }
 TToElementWithPlaceholder >> showPlaceholder [
 
-	self currentPlaceholderLayer ifNotNil: [ ^ self ].
-	self rawPlaceholderBuilder ifNotNil: [ :builder |
-		| ph |
-		ph := self newPlaceholder.
-		builder value: ph value: self.
-		self userData at: #currentPlaceholderLayer put: ph.
-		ph attachTo: self.
-		ph elevation: self placeholderElevation.
-		self addChild: ph.
+	self placeholderLayer ifNotNil: [ :ph |
+		ph visibility: BlVisibility visible.
 		self dispatchEvent: (ToPlaceholderShownEvent new
 				 placeholder: ph;
 				 yourself) ]

@@ -3,129 +3,68 @@ Trait {
 	#category : #'Toplo-Core'
 }
 
-{ #category : #'t - orientable - orientation' }
+{ #category : #'t - orientable' }
 TToOrientable >> beHorizontal [
 
 	self horizontal: true
 ]
 
-{ #category : #'t - orientable - direction' }
-TToOrientable >> beLeftToRight [
-
-	self isLeftToRight ifTrue: [ ^ self ].
-	self direction: BlLayoutDirection leftToRight
-]
-
-{ #category : #'t - orientable - direction' }
-TToOrientable >> beRightToLeft [
-
-	self isRightToLeft ifTrue: [ ^ self ].
-	self direction: BlLayoutDirection rightToLeft
-]
-
-{ #category : #'t - orientable - orientation' }
+{ #category : #'t - orientable' }
 TToOrientable >> beVertical [
 
 	self vertical: true
 ]
 
-{ #category : #'t - orientable - accessing' }
-TToOrientable >> direction [
-
-	^ self layoutStrategy direction
-]
-
-{ #category : #'t - orientable - accessing' }
-TToOrientable >> direction: aDirection [
-
-	(self layoutStrategy direction isLeftToRight and: [
-		 aDirection isLeftToRight ]) ifTrue: [ ^ self ].
-	(self layoutStrategy direction isRightToLeft and: [
-		 aDirection isRightToLeft ]) ifTrue: [ ^ self ].
-	self layoutStrategy direction: aDirection.
-	self dispatchEvent: ToLayoutDirectionChangedEvent new.
-	self requestLayout
-]
-
-{ #category : #'t - orientable - orientation' }
+{ #category : #'t - orientable' }
 TToOrientable >> horizontal: aBoolean [
 
 	aBoolean
 		ifTrue: [
 			self isHorizontal ifTrue: [ ^ self ].
-			self layoutStrategy beHorizontal ]
+			self layout beHorizontal ]
 		ifFalse: [
 			self isVertical ifTrue: [ ^ self ].
-			self layoutStrategy beVertical ].
+			self layout beVertical ].
+	self requestConfiguration.
 	self dispatchEvent: ToLayoutOrientationChangedEvent new.
-	self requestLayout
+	self requestNewSkin
 ]
 
-{ #category : #'t - orientable - orientation' }
+{ #category : #'t - orientable' }
 TToOrientable >> isHorizontal [
 
-	^ self layoutStrategy isHorizontal
+	^ self layout isHorizontal
 ]
 
-{ #category : #'t - orientable - direction' }
-TToOrientable >> isLeftToRight [
-
-	^ self direction isLeftToRight
-]
-
-{ #category : #'t - orientable - direction' }
-TToOrientable >> isRightToLeft [
-
-	^ self direction isRightToLeft
-]
-
-{ #category : #'t - orientable - orientation' }
+{ #category : #'t - orientable' }
 TToOrientable >> isVertical [
 
 	^ self isHorizontal not
 ]
 
-{ #category : #'t - orientable - accessing' }
-TToOrientable >> layoutStrategy [
+{ #category : #'t - orientable' }
+TToOrientable >> isVertical: aBoolean [
 
-	^ self explicitRequirement 
-
-	
+	self vertical: aBoolean
 ]
 
-{ #category : #'t - orientable - direction' }
-TToOrientable >> leftToRight: aBoolean [
-
-	aBoolean = self isLeftToRight ifTrue: [ ^ self ].
-	aBoolean ifTrue: [ self beLeftToRight ] ifFalse: [ self beRightToLeft ]
-]
-
-{ #category : #'t - orientable - accessing' }
+{ #category : #'t - orientable' }
 TToOrientable >> orientation [
 
-	^ self layoutStrategy orientation
+	^ self layout orientation
 ]
 
-{ #category : #'t - orientable - accessing' }
+{ #category : #'t - orientable' }
 TToOrientable >> orientation: aBlLayoutOrientation [
 
-	(self layoutStrategy orientation isHorizontal and: [
-		 aBlLayoutOrientation isHorizontal ]) ifTrue: [ ^ self ].
-	(self layoutStrategy orientation isVertical and: [
-		 aBlLayoutOrientation isVertical ]) ifTrue: [ ^ self ].
-	self layoutStrategy orientation: aBlLayoutOrientation.
+	self layout orientation = aBlLayoutOrientation ifTrue: [ ^ self ].
+	self layout orientation: aBlLayoutOrientation.
+	self requestConfiguration.
 	self dispatchEvent: ToLayoutOrientationChangedEvent new.
-	self requestLayout
+	self requestNewSkin 
 ]
 
-{ #category : #'t - orientable - direction' }
-TToOrientable >> rightToLeft: aBoolean [
-
-	aBoolean = self isRightToLeft ifTrue: [ ^ self ].
-	aBoolean ifTrue: [ self beRightToLeft ] ifFalse: [ self beLeftToRight ]
-]
-
-{ #category : #'t - orientable - orientation' }
+{ #category : #'t - orientable' }
 TToOrientable >> vertical: aBoolean [
 
 	self horizontal: aBoolean not

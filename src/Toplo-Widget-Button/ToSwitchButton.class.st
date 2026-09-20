@@ -2,10 +2,16 @@ Class {
 	#name : #ToSwitchButton,
 	#superclass : #ToButton,
 	#instVars : [
-		'wishedTrackSize'
+		'wishedTrackExtent'
 	],
 	#category : #'Toplo-Widget-Button-Switch'
 }
+
+{ #category : #'t - checkable - accessing' }
+ToSwitchButton >> allowIndeterminate: aBoolean [
+
+	self shouldNotImplement 
+]
 
 { #category : #'t - checkable  - protocol' }
 ToSwitchButton >> checkableEventHandlerClass [
@@ -29,9 +35,12 @@ ToSwitchButton >> handleCheckedBuilder: aValuable [
 ToSwitchButton >> initialize [
 
 	super initialize.
-	self icon: ToSwitchIcon new.
-	self initializeCheckable.
-	self checked: false
+	self icon: (ToSwitchIcon new
+			 parentSwitchButton: self;
+			 yourself).
+	self initializeAsCheckable.
+	self checked: false.
+	self clickEventClass: ToCheckableChangedEvent
 ]
 
 { #category : #skin }
@@ -43,10 +52,10 @@ ToSwitchButton >> newRawSkin [
 { #category : #layout }
 ToSwitchButton >> onMeasure: anExtentMeasurementSpec [
 
-	wishedTrackSize ifNotNil: [
-		self icon size:
-			wishedTrackSize - (self padding left + self padding right
-			 @ (self padding top + self padding bottom)) ].
+	wishedTrackExtent ifNotNil: [
+			self icon extent:
+				wishedTrackExtent - (self padding left + self padding right
+				 @ (self padding top + self padding bottom)) ].
 
 	super onMeasure: anExtentMeasurementSpec
 ]
@@ -64,14 +73,20 @@ ToSwitchButton >> uncheckedContainer [
 ]
 
 { #category : #accessing }
-ToSwitchButton >> wishedTrackSize: aPoint [
+ToSwitchButton >> wishedTrackExtent: aPoint [
 
-	wishedTrackSize := aPoint.
+	wishedTrackExtent := aPoint.
 	self requestLayout
 ]
 
-{ #category : #'t - checkable  - protocol' }
-ToSwitchButton >> withIndeterminate: aBoolean [
+{ #category : #accessing }
+ToSwitchButton >> wishedTrackSize: aPoint [
 
-	self shouldNotImplement 
+		self
+		deprecated: 'Use #wishedTrackExtent: instead. See: https://github.com/pharo-graphics/Bloc/issues/802'
+		transformWith:
+			'`@receiver wishedTrackSize: `@arg' ->
+			'`@receiver wishedTrackExtent: `@arg'.
+
+	self wishedTrackExtent: aPoint
 ]

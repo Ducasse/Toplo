@@ -1,8 +1,8 @@
 Class {
 	#name : #ToSwitchIcon,
-	#superclass : #ToGeneralButton,
-	#classTraits : 'TToCheckable classTrait',
+	#superclass : #ToElement,
 	#instVars : [
+		'parentSwitchButton',
 		'track',
 		'handle',
 		'checked',
@@ -15,18 +15,18 @@ Class {
 		'handleDisabledBuilder',
 		'firstMeasureDone',
 		'handleWidth',
-		'wishedSize'
+		'wishedExtent'
 	],
 	#category : #'Toplo-Widget-Button-Switch'
 }
 
 { #category : #layout }
-ToSwitchIcon >> applySize: aPoint [
+ToSwitchIcon >> applyExtent: aPoint [
 	" given my expected size, adapt the size of my handle and of onSide and offSide "
 
-	self geometry: (BlRoundedRectangleGeometry cornerRadius: aPoint y / 2).
+	self geometry: BlStadiumGeometry new.
 	handleWidth := aPoint y - (self defaultHandleMarginWidth * 2).
-	self handle size: handleWidth asPoint
+	self handle extent: handleWidth asPoint
 ]
 
 { #category : #accessing }
@@ -40,7 +40,7 @@ ToSwitchIcon >> checked: aBoolean [
 
 	checked = aBoolean ifTrue: [ ^ self ].
 	checked := aBoolean.
-	self dispatchEvent: (ToCheckableCheckEvent current: checked previous: checked not)
+	self dispatchEvent: (ToCheckableCheckEvent checked: checked)
 ]
 
 { #category : #accessing }
@@ -50,15 +50,22 @@ ToSwitchIcon >> checkedContainer [
 ]
 
 { #category : #initialization }
+ToSwitchIcon >> defaultExtent [
+
+	^ 24@22.0
+]
+
+{ #category : #initialization }
 ToSwitchIcon >> defaultHandleMarginWidth [
 
 	^ 2
 ]
 
-{ #category : #initialization }
-ToSwitchIcon >> defaultSize [
+{ #category : #'api - bounds' }
+ToSwitchIcon >> extent: aPoint [
 
-	^ 35@20.0
+	self wishedExtent: aPoint.
+	super extent: aPoint
 ]
 
 { #category : #'private - layout' }
@@ -132,8 +139,7 @@ ToSwitchIcon >> initialize [
 
 	super initialize.
 	self id: #'switchIcon'.
-	wishedSize := self defaultSize.
-	self applySkinInstallerOnFirstRequest: false.
+	wishedExtent := self defaultExtent.
 	self layout: BlBasicLayout new.
 	track := self newTrack.
 	handle := self newHandle.
@@ -167,7 +173,7 @@ ToSwitchIcon >> initialize [
 			c frame horizontal alignCenter ] ].
 	
 	self addChild: track.
-	self size: wishedSize.
+	self extent: wishedExtent.
 	self checked: false.
 	firstMeasureDone := false.
 ]
@@ -186,7 +192,7 @@ ToSwitchIcon >> newHandle [
 		  margin: (BlInsets all: self defaultHandleMarginWidth);
 		  layout: BlFrameLayout new;
 		  background: Color white;
-		vMatchParent;
+		  vMatchParent;
 		  yourself
 ]
 
@@ -215,26 +221,47 @@ ToSwitchIcon >> onChildAddedInSideContainer [
 { #category : #layout }
 ToSwitchIcon >> onMeasure: anExtentMeasurementSpec [
 
-	| finalSize sideContainerSize |
+	| finalExtent sideContainerExtent |
 	super onMeasure: anExtentMeasurementSpec.
-	sideContainerSize := (self checkedContainer measuredWidth max:
-		                      self uncheckedContainer measuredWidth)
-	                     @ (self checkedContainer measuredHeight max:
-			                      self uncheckedContainer measuredHeight).
-	finalSize := sideContainerSize x + 8 + sideContainerSize y
-	             @ (sideContainerSize y + 2) max: wishedSize.
+
+	sideContainerExtent := Point
+		x: (self checkedContainer measuredWidth max:
+			self uncheckedContainer measuredWidth)
+		y: (self checkedContainer measuredHeight max:
+			self uncheckedContainer measuredHeight).
+
+	finalExtent :=
+		sideContainerExtent x + 8 + sideContainerExtent y
+		@ (sideContainerExtent y + 2) max: wishedExtent.
+
 	anExtentMeasurementSpec widthSpec size:
-		(finalSize x max: anExtentMeasurementSpec widthSpec size).
+		(finalExtent x max: anExtentMeasurementSpec widthSpec size).
+
 	anExtentMeasurementSpec heightSpec size:
-		(finalSize y max: anExtentMeasurementSpec heightSpec size).
-	self size = finalSize ifFalse: [
-		self applySize: finalSize.
+		(finalExtent y max: anExtentMeasurementSpec heightSpec size).
+
+	self extent = finalExtent ifFalse: [
+		self applyExtent: finalExtent.
 		firstMeasureDone := false.
-		self requestNewSkin  ].
+		self requestNewSkin ].
+
 	super onMeasure: anExtentMeasurementSpec.
+
 	firstMeasureDone ifTrue: [ ^ self ].
 	self switch: self isChecked.
 	firstMeasureDone := true
+]
+
+{ #category : #accessing }
+ToSwitchIcon >> parentSwitchButton [
+
+	^ parentSwitchButton
+]
+
+{ #category : #accessing }
+ToSwitchIcon >> parentSwitchButton: aSwitchButton [
+
+	parentSwitchButton := aSwitchButton
 ]
 
 { #category : #layout }
@@ -247,13 +274,6 @@ ToSwitchIcon >> showSide [
 		ifFalse: [
 			checkedSide visibility: BlVisibility hidden.
 			uncheckedSide visibility: BlVisibility visible ]
-]
-
-{ #category : #'api - bounds' }
-ToSwitchIcon >> size: aPoint [
-
-	self wishedSize: aPoint.
-	super size: aPoint
 ]
 
 { #category : #layout }
@@ -322,7 +342,7 @@ ToSwitchIcon >> updateHandleContent [
 ]
 
 { #category : #accessing }
-ToSwitchIcon >> wishedSize: aPoint [
+ToSwitchIcon >> wishedExtent: aPoint [
 
-	wishedSize := aPoint
+	wishedExtent := aPoint
 ]

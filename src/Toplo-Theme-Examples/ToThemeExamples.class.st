@@ -8,14 +8,14 @@ Class {
 }
 
 { #category : #private }
-ToThemeExamples class >> createThemeMenuBar: aSpace [
+ToThemeExamples class >> createThemeMenuPane: aSpace [
 
 	| bar themeMenu inspectMenu beeMenu rawMenu |
-	bar := ToMenuBar new
+	bar := ToMenuPane new
 		       hMatchParent;
 		       vFitContent.
-	bar addMenu: (themeMenu := ToMenu new labelText: 'Theme').
-	bar addMenu: (inspectMenu := ToMenu new labelText: 'Tools').
+	bar addItem: (themeMenu := ToMenu new labelText: 'Theme').
+	bar addItem: (inspectMenu := ToMenu new labelText: 'Tools').
 
 	"Theme menu"
 	"Button to switch between light and dark theme"
@@ -23,40 +23,40 @@ ToThemeExamples class >> createThemeMenuBar: aSpace [
 
 	beeMenu addItem: (ToMenuItem new
 			 label: (ToLabel text: 'Switch to Light');
-			 whenClickedDo: [ self switchTheme: ToBeeTheme new for: aSpace ]).
+			 clickAction: [ self switchTheme: ToBeeTheme new for: aSpace ]).
 	beeMenu addItem: (ToMenuItem new
 			 label: (ToLabel text: 'Switch to Dark');
-			 whenClickedDo: [ self switchTheme: ToBeeDarkTheme new for: aSpace ]).
+			 clickAction: [ self switchTheme: ToBeeDarkTheme new for: aSpace ]).
 
 	themeMenu addItem: (rawMenu := ToMenu new labelText: 'Raw theme').
 	rawMenu addItem: (ToMenuItem new
 			 label: (ToLabel text: 'Switch to Light');
-			 whenClickedDo: [ self switchTheme: ToRawTheme new for: aSpace ]).
+			 clickAction: [ self switchTheme: ToRawTheme new for: aSpace ]).
 	rawMenu addItem: (ToMenuItem new
 			 label: (ToLabel text: 'Switch to Dark');
-			 whenClickedDo: [ self switchTheme: ToRawDarkTheme new for: aSpace ]).
-			
+			 clickAction: [ self switchTheme: ToRawDarkTheme new for: aSpace ]).
+
 	themeMenu addItem: (ToMenuItem new
 			 label: (ToLabel text: 'Randomize color');
-			 whenClickedDo: [ self randomizePrimaryColorFor: aSpace ]).
+			 clickAction: [ self randomizePrimaryColorFor: aSpace ]).
 
 	"Inspect menu"
 	inspectMenu addItem: (ToMenuItem new
 			 label: (ToLabel text: 'Inspect Space');
 			 tooltipText: 'Inspect the BlSpace';
-			 whenClickedDo: [ self inspectSpace: aSpace ]).
+			 clickAction: [ self inspectSpace: aSpace ]).
 	inspectMenu addItem: (ToMenuItem new
 			 label: (ToLabel text: 'Inspect Theme');
 			 tooltipText: 'Inspect the current theme';
-			 whenClickedDo: [ self inspectSpaceToTheme: aSpace ]).
+			 clickAction: [ self inspectSpaceToTheme: aSpace ]).
 	inspectMenu addItem: (ToMenuItem new
 			 label: (ToLabel text: 'CSS like Style Sheet');
 			 tooltipText: 'Show the current style sheet source code';
-			 whenClickedDo: [ self displaySpaceCSSLikeStyleSheet: aSpace ]).
+			 clickAction: [ self displaySpaceCSSLikeStyleSheet: aSpace ]).
 	inspectMenu addItem: (ToMenuItem new
 			 label: (ToLabel text: 'Style Sheet');
 			 tooltipText: 'Show the current style sheet source code';
-			 whenClickedDo: [ self displaySpaceStyleSheet: aSpace ]).
+			 clickAction: [ self displaySpaceStyleSheet: aSpace ]).
 
 	^ bar
 ]
@@ -147,54 +147,55 @@ ToThemeExamples class >> example_BlElementWithTheme [
 
 	pn := BlElement new layout: (BlLinearLayout vertical cellSpacing: 10).
 	pn constraintsDo: [ :c |
-		c vertical matchParent.
-		c horizontal matchParent ].
-	
-	pn2 := BlElement new layout: (BlFrameLayout new).
+			c vertical matchParent.
+			c horizontal matchParent ].
+
+	pn2 := BlElement new layout: BlFrameLayout new.
 	pn2 constraintsDo: [ :c |
-		c vertical matchParent.
-		c horizontal matchParent ].
+			c vertical matchParent.
+			c horizontal matchParent ].
 	pn2 addChild: pn.
 
 	pn background: Color white.
-	pn2 ensureCanManageSkin.
+	pn2 ensureCanManageToploSkin.
 	pn2 localTheme: ToBeeTheme new.
 
 	themeSwitcher := ToCheckbox new
 		                 labelText: 'Dark Theme';
-		                 beEndToStart.
-		
+		                 beEndToStart;
+		                 checkAction: [ :evt |
+				                 pn localTheme: (evt currentTarget isChecked
+							                  ifTrue: [ ToBeeDarkTheme new ]
+							                  ifFalse: [ ToBeeTheme new ]).
+				                 evt currentTarget isChecked
+					                 ifTrue: [ pn background: Color gray ]
+					                 ifFalse: [ pn background: Color white ] ];
+		                 yourself.
+
 	themeSwitcher defaultSkin: ToCheckboxSkin new.
-	themeSwitcher addEventHandler: (BlEventHandler
-			 on: ToCheckableChangedEvent
-			 do: [ :event |
-				 pn localTheme: (themeSwitcher isChecked
-						  ifTrue: [ ToBeeDarkTheme new ]
-						  ifFalse: [ ToBeeTheme new ]).
-				 themeSwitcher isChecked
-					 ifTrue: [ pn background: Color gray ]
-					 ifFalse: [ pn background: Color white ] ]).
 
 	pn addChild: themeSwitcher.
 	space root addChild: pn2.
-	
+
 	hello := ToLabel new text: 'Hello H1'.
-	hello addAllStamps: #(#H1 #success).
-	
+	hello addAllStamps: #( #H1 #success ).
+
 	helloWorld := ToTextField new text: 'Hello world'.
 	helloWorld addStamp: #description.
-	helloWorld withLineWrapping; beReadonlyWithoutSelection.
+	helloWorld
+		wrappingMode: true;
+		beReadonlyWithoutSelection.
 	helloWorld localTheme: ToBeeTheme new.
 	pn addChild: hello.
 	pn addChild: helloWorld.
 
 
 	listElement := ToListElement new nodeBuilder: [ :node :dataItem :holder |
-		               |  lab |
-		               lab := dataItem.
-		               lab removeFromParent.
-		               lab hMatchParent.
-		               node addChild: lab ].
+			               | lab |
+			               lab := dataItem.
+			               lab removeFromParent.
+			               lab hMatchParent.
+			               node addChild: lab ].
 
 	listElement background: Color transparent.
 	typeArr := {
@@ -212,13 +213,13 @@ ToThemeExamples class >> example_BlElementWithTheme [
 		              ('H5' -> #H5) }.
 
 	typeArr do: [ :typeAssoc |
-		headingArr do: [ :headingAssoc |
-			| lab |
-			lab := ToLabel new.
-			lab addAllStamps: typeAssoc value.
-			lab addStamp: headingAssoc value.
-			lab text: typeAssoc key , ' ' , headingAssoc key.
-			listElement dataAccessor add: lab ] ].
+			headingArr do: [ :headingAssoc |
+					| lab |
+					lab := ToLabel new.
+					lab addAllStamps: typeAssoc value.
+					lab addStamp: headingAssoc value.
+					lab text: typeAssoc key , ' ' , headingAssoc key.
+					listElement dataAccessor add: lab ] ].
 	pn addChild: listElement.
 	listElement requestNewSkin.
 	space show
@@ -241,7 +242,7 @@ ToThemeExamples class >> example_BlElementWithTheme2 [
 		c vertical matchParent.
 		c horizontal matchParent ].
 	
-	pn2 ensureCanManageSkin.
+	pn2 ensureCanManageToploSkin.
 	pn2 localTheme: ToBeeTheme new.
 	
 	space root addChild: pn2.
@@ -266,13 +267,12 @@ ToThemeExamples class >> example_ToLabelWithHeadingSkin [
 		                 labelText: 'Dark Theme';
 		                 beEndToStart.
 	themeSwitcher defaultSkin: ToCheckboxSkin new.
-	themeSwitcher addEventHandler: (BlEventHandler
-			 on: ToCheckableChangedEvent
-			 do: [ :event |
-				 space toTheme: (themeSwitcher isChecked
-						  ifTrue: [ ToBeeDarkTheme new ]
-						  ifFalse: [ ToBeeTheme new ]) ]).
-
+	themeSwitcher
+		checkAction: [ :evt |
+			evt target space toTheme: (evt target isChecked
+					 ifTrue: [ ToBeeDarkTheme new ]
+					 ifFalse: [ ToBeeTheme new ]) ].
+	themeSwitcher checked: (Toplo defaultThemeClass = ToBeeDarkTheme).
 	space root addChild: themeSwitcher.
 
 	listElement := ToListElement new nodeBuilder: [ :node :dataItem :holder |
@@ -310,127 +310,32 @@ ToThemeExamples class >> example_ToLabelWithHeadingSkin [
 
 { #category : #'examples - labels' }
 ToThemeExamples class >> example_WithLateBoundPropertyWriter [
+	"  create a ToLateBoundWritableProperty for writing #'text-attributes-with-builder' "
 
-	| styleSheet lab parent |
-	styleSheet := ToStyleSheet new
-		              inherits: false;
-		              yourself.
-	styleSheet addWritableProperty: (ToPseudoProperty new
-			 name: #textBuilder;
-			 writer: [ :e :v | e text attributes: v attributes ]).
-	styleSheet select: ToLabel asTypeSelector style: [ :sr |
-		sr
-			when: ToInstallSkinEvent
-			write: #textBuilder asWritableProperty
-			with: [ :e |
-				e textAttributesBuilder defaultFontName: 'American Typewriter'.
-				e textAttributesBuilder fontSize: 32.
-				e textAttributesBuilder foreground:
-					(e valueOfTokenNamed: #'my-red-color') ] ].
+	| styleSheet1 styleSheet2 lab |
 	lab := ToLabel new.
-	lab text: 'Hello My World'.
-	parent := ToElement new matchParent.
-	parent addEventHandlerOn: ToThemePreInstallEvent do: [ :event |
-		event currentTarget lookupTheme addTokenProperty:
-			(ToTokenProperty name: #'my-red-color' value: Color red) ].
-	parent localTheme: ToBeeTheme new.
-	lab styleSheet: styleSheet.
+	lab addTokenNamed: #'my-foreground' withValue: Color green.
 
-	parent addChild: lab.
-	parent openInSpace.
-	lab inspect
-]
+	styleSheet1 := ToStyleSheet new.
+	styleSheet1 select: ToLabel asTypeSelector style: [ :sr |
+			sr
+				when: ToEnabledSkinEvent
+				write: #'text-attributes-with-builder' asWritableProperty
+				with: [ :e |
+						e textAttributesBuilder foreground:
+							(e valueOfTokenNamed: #'my-foreground').
+						e textAttributesBuilder defaultFontSize: 32.
+						e textAttributesBuilder ] ].
 
-{ #category : #'examples - buttons' }
-ToThemeExamples class >> example_beeButtonsInRawPane [
+	styleSheet2 := ToStyleSheet new.
 
-	| space primaryButton2 pane c chb disachb themeSelect themePane mainPane |
-	space := BlSpace new.
-	space root layout: BlLinearLayout vertical.
-	space toTheme: ToBeeDarkTheme new.
-
-	themePane := ToPane horizontal.
-	themePane localTheme: ToRawTheme new.
-	themePane geometry: (BlRoundedRectangleGeometry cornerRadius: 6).
-	themePane padding: (BlInsets all: 5).
-	pane := ToPane vertical.
-
-	pane layout cellSpacing: 5.
-	pane padding: (BlInsets all: 5).
-
-
-	themeSelect := ToChoiceMenu new.
-	themeSelect dataToTextConverter: [ :assoc | assoc key ].
-	themeSelect withStrictCheckingStrategy.
-	themeSelect data addAll: {
-			('Raw Light Theme' -> ToRawTheme).
-			('Raw Dark Theme' -> ToRawDarkTheme).
-			('Bee Light Theme' -> ToBeeTheme).
-			('Bee Dark Theme' -> ToBeeDarkTheme) }.
-
-	themeSelect addEventHandler: (BlEventHandler
-			 on: ToChoiceChangedEvent
-			 do: [ space toTheme: themeSelect selectedData value new ]).
-	themeSelect selectIndex: 4.
-
-	disachb := ToCheckbox new label:
-		           (ToLabel text: 'Disable all buttons').
-	pane addChild: disachb.
-
-	disachb defaultSkin: ToCheckboxSkin new.
-
-	chb := ToCheckbox new label: (ToLabel text: 'Swith primary').
-	chb defaultSkin: ToCheckboxSkin new.
-
-	"Create some buttons with different skins"
-	primaryButton1 := (ToButton id: #buttonA)
-		                  labelText: 'Change button 2 primary color';
-		                  icon:
-			                  (ToImage inner: ToThemeIcons searchOutlined16x16);
-		                  tooltipText:
-			                  'When clicked, change the theme primary color to a random one';
-		                  addStamp: #'large-sizing';
-		                  yourself.
-
-	primaryButton2 := (ToButton id: #buttonA) labelText: 'Button 2'.
-	primaryButton1 whenClickedDo: [
-		c := Color random.
-		primaryButton2 addTokenNamed: #'color-primary' withValue: c.
-		primaryButton2
-			addTokenNamed: #'color-primary-pressed'
-			withValue: c twiceDarker.
-		primaryButton2
-			addTokenNamed: #'color-primary-hover'
-			withValue: c twiceLighter ].
-	chb addEventHandler: (BlEventHandler
-			 on: ToCheckableCheckEvent
-			 do: [ :evt |
-				 evt current
-					 ifTrue: [ primaryButton2 addStamp: #primary ]
-					 ifFalse: [ primaryButton2 removeStamp: #primary ] ]).
-	chb checked: true.
-	disachb addEventHandler: (BlEventHandler
-			 on: ToCheckableCheckEvent
-			 do: [ :evt |
-				 evt current
-					 ifTrue: [
-						 pane childrenDo: [ :child |
-							 child ~= disachb ifTrue: [ child disable ] ] ]
-					 ifFalse: [
-						 pane childrenDo: [ :child |
-							 child ~= disachb ifTrue: [ child enable ] ] ] ]).
-
-	pane addChild: primaryButton1.
-	pane addChild: chb.
-	pane addChild: primaryButton2.
-	themePane addChild: themeSelect.
-	mainPane := ToPane vertical.
-	mainPane padding: (BlInsets all: 10).
-	mainPane addChild: themePane.
-	mainPane addChild: pane.
-	space root addChild: mainPane.
-	space show.
-	space inspect
+	lab styleSheet: styleSheet1.
+	lab text: 'Click on me to change my stylesheet'.
+	lab clickAction: [
+			lab styleSheet = styleSheet1
+				ifTrue: [ lab styleSheet: styleSheet2 ]
+				ifFalse: [ lab styleSheet: styleSheet1 ] ].
+	lab openInSpace
 ]
 
 { #category : #'examples - buttons' }
@@ -552,7 +457,7 @@ ToThemeExamples class >> openThemeExampleSpace [
 		c horizontal matchParent ].
 
 	"Create UI"
-	space root addChild: (self createThemeMenuBar: space).
+	space root addChild: (self createThemeMenuPane: space).
 	space root addChild: (ToElement id: #themeSandBox).
 
 	"Configure default Theme"

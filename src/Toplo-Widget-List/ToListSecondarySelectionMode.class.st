@@ -1,6 +1,6 @@
 Class {
 	#name : #ToListSecondarySelectionMode,
-	#superclass : #ToAbstractListSelectionMode,
+	#superclass : #ToListRootSelectionMode,
 	#instVars : [
 		'multiple'
 	],
@@ -8,17 +8,12 @@ Class {
 }
 
 { #category : #initialization }
-ToListSecondarySelectionMode >> defaultElementBuilder [
+ToListSecondarySelectionMode >> defaultSelectionOption [
 
-	^ [ ToListSecondarySelectionElement new ]
-]
-
-{ #category : #initialization }
-ToListSecondarySelectionMode >> defaultOption [
-
-	^ (ToListSelectionOption grouped)
+	^ ToListSelectionOption new
+		  grouped: false;
 		  beneath: true;
-		  yourself
+		  elementFactory: [ ToListSecondarySelectionElement new ]
 ]
 
 { #category : #initialization }
@@ -34,10 +29,10 @@ ToListSecondarySelectionMode >> isMultipleSelection [
 	^ multiple
 ]
 
-{ #category : #initialization }
-ToListSecondarySelectionMode >> listEventHandlerClass [
+{ #category : #testing }
+ToListSecondarySelectionMode >> isSecondary [ 
 
-	^ ToListSecondarySelectionElementEventHandler 
+	^ true
 ]
 
 { #category : #accessing }
@@ -50,23 +45,21 @@ ToListSecondarySelectionMode >> multiple: aBoolean [
 ]
 
 { #category : #'instance creation' }
-ToListSecondarySelectionMode >> newListEventHandler [
+ToListSecondarySelectionMode >> newSelecter [
+
+	^ ToSecondarySelecter new
+]
+
+{ #category : #'instance creation' }
+ToListSecondarySelectionMode >> newSelectionChangedEventHandler [ 
 
 	^ ToListSecondarySelectionElementEventHandler new
 ]
 
 { #category : #'instance creation' }
-ToListSecondarySelectionMode >> newSelecter [
-
-	^ ToSecondarySelecter new
-		  selectionChangedEventClass: self selectionChangedEventClass;
-		  yourself
-]
-
-{ #category : #'instance creation' }
 ToListSecondarySelectionMode >> newSelectionModelIn: aListElement [
 
-	^ aListElement newSecondarySelectionModel 
+	^ aListElement selectionModel newSecondarySelectionModel
 ]
 
 { #category : #'instance creation' }

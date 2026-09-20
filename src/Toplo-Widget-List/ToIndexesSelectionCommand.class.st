@@ -1,22 +1,28 @@
 Class {
 	#name : #ToIndexesSelectionCommand,
-	#superclass : #ToSelectionModelAddRemoveCommand,
+	#superclass : #ToSelectionAddRemoveCommand,
 	#instVars : [
 		'indexes'
 	],
 	#category : #'Toplo-Widget-List-Command'
 }
 
-{ #category : #'private - hook' }
-ToIndexesSelectionCommand >> applyOn: anOperator [
+{ #category : #'instance creation' }
+ToIndexesSelectionCommand class >> add: indexes [
 
-	" ask the operator passed as argument to actually apply the command. "
+	^ self new
+		  indexes: indexes;
+		  operation: ToAddSelectionOperation new;
+		  yourself
+]
 
-	self
-		deprecated: 'Use applyOnOperator: instead'
-		transformWith: '`@receiver applyOn: `@argument'
-			-> '`@receiver applyOnOperator: `@argument'.
-	self applyWithOperator: anOperator
+{ #category : #'instance creation' }
+ToIndexesSelectionCommand class >> remove: indexes [
+
+	^ self new
+		  indexes: indexes;
+		  operation: ToRemoveSelectionOperation new;
+		  yourself
 ]
 
 { #category : #'private - hook' }
@@ -36,10 +42,4 @@ ToIndexesSelectionCommand >> indexes [
 ToIndexesSelectionCommand >> indexes: anArray [
 
 	indexes := anArray
-]
-
-{ #category : #accessing }
-ToIndexesSelectionCommand >> intervals [
-
-	^ self intervalsIn: indexes
 ]

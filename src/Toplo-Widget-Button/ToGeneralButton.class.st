@@ -1,38 +1,43 @@
 Class {
 	#name : #ToGeneralButton,
 	#superclass : #ToElement,
-	#traits : 'TToClickable',
-	#classTraits : 'TToClickable classTrait',
+	#traits : 'TToClickable + TToListItem',
+	#classTraits : 'TToClickable classTrait + TToListItem classTrait',
 	#instVars : [
-		'clickHandler',
-		'clickEventClass'
+		'takeFocusOnClick'
 	],
-	#category : #'Toplo-Widget-Button-Core'
+	#category : #'Toplo-Widget-Button-Clickable'
 }
 
-{ #category : #'t - clickable' }
-ToGeneralButton >> clickHandler [
+{ #category : #configuration }
+ToGeneralButton >> applyConfiguration [
 
-	^ clickHandler
-]
-
-{ #category : #'t - clickable' }
-ToGeneralButton >> clickHandler: anEventHandler [
-
-	clickHandler := anEventHandler 
+	super applyConfiguration.
+	self isVExact ifFalse: [ self vFitContent ].
+	self applyConfigurationAsListItem
 ]
 
 { #category : #initialization }
 ToGeneralButton >> defaultLayout [ 
 
-	^ BlLinearLayout new
+	^ BlLinearLayout horizontal
 ]
 
 { #category : #initialization }
 ToGeneralButton >> initialize [
 
 	super initialize.
-	self allowMousePickOutsideEvent
+	self initializeAsClickable.
+	takeFocusOnClick := false
+]
+
+{ #category : #testing }
+ToGeneralButton >> isMenuButton [
+
+	^ self
+		  withAllParentsDetect: [ :p | p isMenuItem ]
+		  ifFound: [ :p | true ]
+		  ifNone: [ false ]
 ]
 
 { #category : #skin }
@@ -41,14 +46,14 @@ ToGeneralButton >> newRawSkin [
 	^ ToGeneralButtonSkin new
 ]
 
-{ #category : #'t - clickable' }
-ToGeneralButton >> rawClickEventClass [
+{ #category : #accessing }
+ToGeneralButton >> takeFocusOnClick [
 
-	^ clickEventClass
+	^ takeFocusOnClick
 ]
 
-{ #category : #'t - clickable' }
-ToGeneralButton >> rawClickEventClass: anEventClass [
+{ #category : #accessing }
+ToGeneralButton >> takeFocusOnClick: aBoolean [
 
-	clickEventClass := anEventClass 
+	takeFocusOnClick := aBoolean
 ]

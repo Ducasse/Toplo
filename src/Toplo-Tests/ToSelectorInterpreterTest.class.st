@@ -12,19 +12,16 @@ ToSelectorInterpreterTest >> testPush [
 
 	| selector e engine theme |
 	selector := ToIdSelector new id: #'my-id'.
-	e := ToElementForStyleRuleTest new.
+	e := ToElement new.
 	e id: #'my-id'.
 	engine := ToSelectorInterpreter new.
 	" the result is false since the selector is exact by default "
 	engine check: selector on: e.
-	self assert: engine result.
-	self assert: e themeForSetup isNil.
-	
+	self assert: engine result.	
 	theme := ToThemeForStyleRuleTest new.
 	engine theme: theme.
 	engine check: selector on: e.
-	self assert: engine result.
-	self assert: e themeForSetup identicalTo: theme.
+	self assert: engine result
 
 	
 	
@@ -311,6 +308,35 @@ ToSelectorInterpreterTest >> testVisitIdSelector [
 ]
 
 { #category : #tests }
+ToSelectorInterpreterTest >> testVisitNoneSelector [
+	" the result is always false "
+
+	| selector e engine |
+	selector := ToIdSelector new id: #'my-id'.
+	selector := ToNoneSelector new left: selector.
+	e := ToElement new.
+	engine := ToSelectorInterpreter new.
+	engine check: selector on: e.
+	self deny: engine result.
+	e id: #'my-id'.
+	engine check: selector on: e.
+	self deny: engine result
+]
+
+{ #category : #tests }
+ToSelectorInterpreterTest >> testVisitNoneSelector2 [
+	" the result is alway false "
+
+	| selector e engine |
+	selector := ToUniversalSelector new .
+	selector := ToNoneSelector new left: selector.
+	e := ToElement new.
+	engine := ToSelectorInterpreter new.
+	engine check: selector on: e.
+	self deny: engine result
+]
+
+{ #category : #tests }
 ToSelectorInterpreterTest >> testVisitNotSelector [
 
 	| selector e engine |
@@ -395,6 +421,142 @@ ToSelectorInterpreterTest >> testVisitOrSelectorWithParentSelector [
 ]
 
 { #category : #tests }
+ToSelectorInterpreterTest >> testVisitParentSatisfyingSelector [
+
+	| engine selector button label |
+	selector := ToUniversalSelector new
+		            withParent: #'big-button' asStampSelector
+		            satisfying: ToButton asTypeSelector.
+
+	button := ToButton new.
+	label := ToLabel new.
+	engine := ToSelectorInterpreter new.
+	engine check: selector on: label.
+	self deny: engine result.
+	button label: label.
+	button applyConfiguration.
+
+	engine check: selector on: label.
+	self deny: engine result.
+	button addStamp: #'big-button'.
+	engine check: selector on: label.
+	self assert: engine result
+]
+
+{ #category : #tests }
+ToSelectorInterpreterTest >> testVisitParentSatisfyingSelector0 [
+	" fails if the element has no parent "
+
+	| engine selector button |
+	selector := ToUniversalSelector new
+		            withParent: #'big-button' asStampSelector
+		            satisfying: ToButton asTypeSelector.
+
+	button := ToButton new.
+	engine := ToSelectorInterpreter new.
+	engine check: selector on: button.
+	self deny: engine result.
+	button addStamp: #'big-button'.
+	engine check: selector on: button.
+	self deny: engine result
+]
+
+{ #category : #tests }
+ToSelectorInterpreterTest >> testVisitParentSatisfyingSelector2 [
+
+	| engine selector element label |
+	selector := ToUniversalSelector new
+		            withParent: #'big-button' asStampSelector
+		            satisfying: ToButton asTypeSelector.
+
+	element := ToLabeledIcon new.
+	label := ToLabel new.
+	engine := ToSelectorInterpreter new.
+	engine check: selector on: label.
+	self deny: engine result.
+	element label: label.
+	engine check: selector on: label.
+	self deny: engine result.
+	element addStamp: #'big-button'.
+	engine check: selector on: label.
+	self deny: engine result
+]
+
+{ #category : #tests }
+ToSelectorInterpreterTest >> testVisitParentSatisfyingSelector3 [
+
+	| engine selector element label |
+	selector := ToUniversalSelector new
+		            withParent: #'big-button' asStampSelector
+		            satisfying: ToLabeledIcon asTypeSelector.
+
+	element := ToLabeledIcon new.
+	label := ToLabel new.
+	engine := ToSelectorInterpreter new.
+	engine check: selector on: label.
+	self deny: engine result.
+	element label: label.
+	element applyConfiguration.
+
+	engine check: selector on: label.
+	self deny: engine result.
+	element addStamp: #'big-button'.
+	engine check: selector on: label.
+	self assert: engine result.
+	
+
+]
+
+{ #category : #tests }
+ToSelectorInterpreterTest >> testVisitParentSatisfyingSelector4 [
+
+	| engine selector element label |
+	selector := ToUniversalSelector new
+		            withParent: ToLabeledIcon asTypeSelector
+		            satisfying: #'big-button' asStampSelector .
+
+	element := ToLabeledIcon new.
+	label := ToLabel new.
+	engine := ToSelectorInterpreter new.
+	engine check: selector on: label.
+	self deny: engine result.
+	element label: label.
+	element applyConfiguration.
+
+	engine check: selector on: label.
+	self deny: engine result.
+	element addStamp: #'big-button'.
+	engine check: selector on: label.
+	self assert: engine result.
+	
+
+]
+
+{ #category : #tests }
+ToSelectorInterpreterTest >> testVisitParentSatisfyingSelector5 [
+
+	| engine selector element label |
+	selector := ToUniversalSelector new
+		            withParent: ToLabeledIcon asTypeSelector
+		            satisfying:
+		            [ :p | p hasStamp: #'big-button' ] asActionSelector.
+
+	element := ToLabeledIcon new.
+	label := ToLabel new.
+	engine := ToSelectorInterpreter new.
+	engine check: selector on: label.
+	self deny: engine result.
+	element label: label.
+	element applyConfiguration.
+
+	engine check: selector on: label.
+	self deny: engine result.
+	element addStamp: #'big-button'.
+	engine check: selector on: label.
+	self assert: engine result
+]
+
+{ #category : #tests }
 ToSelectorInterpreterTest >> testVisitParentSelector [
 	" selector: an element with a parent of type Object "
 
@@ -413,6 +575,24 @@ ToSelectorInterpreterTest >> testVisitParentSelector [
 	selector right exact: false.
 	engine check: selector on: e.
 	self assert: engine result
+]
+
+{ #category : #tests }
+ToSelectorInterpreterTest >> testVisitParentSelector0 [
+	" selector: an element with a parent of type ToElement fails 
+	if runned on anElement without any parent event the selected type matches"
+
+	| selector e engine |
+	selector := ToUniversalSelector new withParent:
+		            (ToTypeSelector new type: ToElement).
+	e := ToElement new.
+	engine := ToSelectorInterpreter new.
+	engine check: selector on: e.
+	self deny: engine result.
+	" now allow isKindOf: "
+	selector right exact: false.
+	engine check: selector on: e.
+	self deny: engine result
 ]
 
 { #category : #tests }
@@ -726,6 +906,8 @@ ToSelectorInterpreterTest >> testVisitTypeSelectorAndChildSelector [
 		            (ToTypeSelector new type: ToLabel).
 	e := ToLabeledIcon new.
 	e label: (ToLabel text: 'A').
+	e applyConfiguration.
+
 	engine := ToSelectorInterpreter new.
 	engine check: selector on: e.
 	self assert: engine result
@@ -737,6 +919,8 @@ ToSelectorInterpreterTest >> testVisitTypeSelectorAndParentSelector [
 	| selector e engine |
 	e := ToLabeledIcon new.
 	e label: (ToLabel text: 'A').
+	e applyConfiguration.
+
 	selector := (ToTypeSelector new type: ToLabel)
 		            withParent: (ToTypeSelector new type: ToLabeledIcon)
 		            atDepth: 2.

@@ -1,69 +1,31 @@
 Trait {
 	#name : #TToClickable,
-	#category : #'Toplo-Widget-Button-Core'
+	#category : #'Toplo-Widget-Button-Clickable'
 }
-
-{ #category : #'t - clickable' }
-TToClickable >> clickEvent: anEvent [
-]
 
 { #category : #'t - clickable' }
 TToClickable >> clickEventClass [
 
-	^ self rawClickEventClass ifNil: [ BlPrimaryClickEvent ]
+	^ self userData at: #clickEventClass ifAbsent: [ BlPrimaryClickEvent  ]
 ]
 
 { #category : #'t - clickable' }
 TToClickable >> clickEventClass: anEventClass [
 
-	self rawClickEventClass: anEventClass 
+	anEventClass ifNil: [
+		self userData removeKey: #clickEventClass.
+		^ self ].
+	self userData at: #clickEventClass put: anEventClass
 ]
 
 { #category : #'t - clickable' }
-TToClickable >> clickHandler [
+TToClickable >> initializeAsClickable [ 
 
-	^ self explicitRequirement 
+	self addEventHandler: ToClickableEventHandler new.
 ]
 
 { #category : #'t - clickable' }
-TToClickable >> clickHandler: anEventHandler [
+TToClickable >> takeFocusOnClick [
 
-	self explicitRequirement 
-]
-
-{ #category : #'t - clickable' }
-TToClickable >> newClickHandlerWith: aBlock [
-
-	^ ToClickableActionEventHandler action: aBlock
-]
-
-{ #category : #'t - clickable' }
-TToClickable >> rawClickEventClass [
-
-	^ self explicitRequirement 
-]
-
-{ #category : #'t - clickable' }
-TToClickable >> rawClickEventClass: anEventClass [
-
-	self explicitRequirement 
-]
-
-{ #category : #'t - clickable' }
-TToClickable >> removeClickHandler [
-	"remove the click action"
-
-	self clickHandler ifNotNil: [ :ch |
-		self removeEventHandler: ch.
-		self clickHandler: nil ]
-]
-
-{ #category : #'t - clickable' }
-TToClickable >> whenClickedDo: aBlock [
-	"Inform that the widget has been clicked."
-
-	" only one official handler "
-	self removeClickHandler.
-	self clickHandler: (self newClickHandlerWith: aBlock).
-	self addEventHandler: self clickHandler
+	^ false
 ]

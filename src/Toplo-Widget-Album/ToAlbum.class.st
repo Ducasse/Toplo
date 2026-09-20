@@ -5,23 +5,34 @@ Class {
 	#classTraits : 'TAlbInfiniteDecorator classTrait + TBlAnnouncerProvider classTrait + TToElementWithPlaceholder classTrait',
 	#instVars : [
 		'next',
-		'editsFeedbackLayer',
 		'edited',
-		'autocompleteRule'
+		'useScrollbar',
+		'scrollbar'
 	],
 	#category : #'Toplo-Widget-Album-TextPane'
 }
 
-{ #category : #initialization }
-ToAlbum >> autocompleteRule [
+{ #category : #layers }
+ToAlbum >> addEditsFeedbackLayer [
 
-	^ autocompleteRule 
+	| layer |
+	self editsFeedbackLayer ifNotNil: [ ^ self ].
+	layer := ToAlbumEditsFeedbackLayer new.
+	layer id: #editsFeedbackLayer.
+	layer attachToParent: self
 ]
 
-{ #category : #initialization }
-ToAlbum >> autocompleteRule: anAutocompleteRule [
+{ #category : #accessing }
+ToAlbum >> albumEditorElement [ 
 
-	autocompleteRule := anAutocompleteRule
+	^ self next
+]
+
+{ #category : #configuration }
+ToAlbum >> applyConfiguration [ 
+
+	super applyConfiguration.
+	self configureScrollbar
 ]
 
 { #category : #'styler configuration' }
@@ -36,6 +47,26 @@ ToAlbum >> codeFontName: aFontName [
 	^ self userData at: #codeFontName put: aFontName
 ]
 
+{ #category : #configuration }
+ToAlbum >> configureScrollbar [
+
+	scrollbar ifNotNil: [
+			scrollbar detach.
+			scrollbar removeFromParent.
+			scrollbar := nil.
+			self requestNewSkin ].
+	useScrollbar ifFalse: [ ^ self ].
+
+	scrollbar := ToScrollbarElement vertical: true.
+	scrollbar
+		addEventHandlerOn: BlElementVisibilityChangedEvent
+		do: [ :evt | self requestNewSkin ].
+	scrollbar attachTo: self scrollbarTarget.
+	scrollbar elevation: (BlRelativeElevation elevation: 20).
+	self addChild: scrollbar.
+	self requestNewSkin
+]
+
 { #category : #initialization }
 ToAlbum >> defaultCodeFontName [
 
@@ -47,6 +78,12 @@ ToAlbum >> defaultCodeFontName [
 ToAlbum >> defaultEditorElement [
 
 	^ AlbEditorElement new
+]
+
+{ #category : #initialization }
+ToAlbum >> defaultEventHandler [
+
+	^ ToAlbumEventHandler new
 ]
 
 { #category : #initialization }
@@ -68,10 +105,28 @@ ToAlbum >> edited: aBoolean [
 	edited := aBoolean
 ]
 
+{ #category : #layers }
+ToAlbum >> editsFeedbackLayer [
+
+	^ self childWithId: #editsFeedbackLayer ifNone: []
+]
+
 { #category : #'client - protocol' }
 ToAlbum >> flash [
 
-	self dispatchEvent: (ToAlbumFlashRequestedEvent new client: self)
+	self dispatchEvent: ToAlbumFlashRequestedEvent new
+]
+
+{ #category : #'focus requesting' }
+ToAlbum >> focusHolder [
+
+	^ self infinite focusHolder
+]
+
+{ #category : #testing }
+ToAlbum >> haveVisibleScrollbar [
+
+	^ scrollbar notNil and: [ scrollbar isVisible ]
 ]
 
 { #category : #initialization }
@@ -79,28 +134,33 @@ ToAlbum >> initialize [
 
 	| sharedDistributor |
 	super initialize.
-
+	useScrollbar := false.
 	self next: self defaultEditorElement.
-	self rootAlbumElement: self.
-	self next primarySelectionElementClass: ToAlbumPrimarySelectionElement.
+	self next rootAlbumElement: self.
+	self next primarySelectionElementClass:
+		self primarySelectionElementClass.
 	self addChild: self next.
 	self matchParent.
-	self addEventHandler: ToAlbumEventHandler new.
+	self addEventHandler: (self defaultEventHandler
+			 target: self;
+			 yourself).
 	sharedDistributor := BlSharedEventDistributor new.
 	sharedDistributor
 		adjustMousePosition: false;
 		shareEvents: {
-				BlDragStartEvent.
-				BlDragEvent.
+				"BlDragStartEvent.
+				BlDragEvent."
 				AlbTextDeletedEvent.
 				AlbTextInsertedEvent.
 				AlbTextEditedEvent.
 				AlbTextReplacedEvent.
 				BlFocusEvent.
 				BlBlurEvent }.
+
 	self addEventHandler: sharedDistributor.
 	" for the focus events "
-	self next addEventHandler: sharedDistributor.	
+	"self next next addEventHandler: sharedDistributor."
+	"self next addEventHandler: sharedDistributor."
 	self infinite addEventHandler: sharedDistributor.
 	" for the styler "
 	self editor addEventHandler: sharedDistributor
@@ -138,16 +198,25 @@ ToAlbum >> placeholderClass [
 	^ ToAlbumPlaceholder
 ]
 
+{ #category : #initialization }
+ToAlbum >> primarySelectionElementClass [
+
+	^ ToAlbumPrimarySelectionElement 
+]
+
+{ #category : #layers }
+ToAlbum >> removeEditsFeedbackLayer [
+
+	| layer |
+	layer := self editsFeedbackLayer ifNil: [ ^ self ].
+	layer detachFromParent
+]
+
 { #category : #'transaction hook' }
 ToAlbum >> requestCancel [
 
-	self dispatchEvent: (ToAlbumCancelRequestedEvent new client: self)
-]
-
-{ #category : #'focus requesting' }
-ToAlbum >> requestFocus [
-
-	self infinite requestFocus 
+	self dispatchEvent:
+		(ToAlbumCancelRequestedEvent new editorElement: self)
 ]
 
 { #category : #'transaction hook' }
@@ -155,7 +224,7 @@ ToAlbum >> requestSave [
 
 	| request answer |
 	request := ToAlbumSaveRequestedEvent new
-		           client: self;
+		           editorElement: self;
 		           unacceptedEdits: self edited;
 		           yourself.
 
@@ -167,7 +236,7 @@ ToAlbum >> requestSave [
 		          ifFalse: [ ToAlbumSaveDeniedEvent new ].
 
 	self dispatchEvent: (answer
-			 client: self;
+			 editorElement: self;
 			 yourself)
 ]
 
@@ -181,16 +250,30 @@ ToAlbum >> requestTextStyle [
 ToAlbum >> saveResult: aBoolean [
 
 	| event |
-	
-	self deprecated: 'Send #validated: to the event current target instead '.
-	
+	self deprecated:
+		'Send #validated: to the event current target instead '.
+
 	self edited: aBoolean not.
 	event := aBoolean
 		         ifTrue: [ ToAlbumSaveAcceptedEvent new ]
 		         ifFalse: [ ToAlbumSaveDeniedEvent new ].
 	self dispatchEvent: (event
-			 client: self;
+			 editorElement: self;
 			 yourself)
+]
+
+{ #category : #configuration }
+ToAlbum >> scrollbarTarget [
+
+		^ self infinite
+]
+
+{ #category : #accessing }
+ToAlbum >> styleTable: aStyleTable [
+
+	self styler styleTable = aStyleTable ifTrue: [ ^ self ].
+	self styler styleTable: aStyleTable.
+	self styler announceStateChanged
 ]
 
 { #category : #'styler configuration' }
@@ -205,10 +288,13 @@ ToAlbum >> styler: aBlStyler [
 	self styler ifNotNil: [ :styler |
 		self styler unsubscribe: self.
 		self unsubscribe: styler ].
-
+	
+	self removeStamp: #'code-editor'.
 	self userData at: #styler put: aBlStyler.
 
 	self styler ifNil: [ ^ self ].
+	
+	self addStamp: #'code-editor'.
 
 	aBlStyler fontName: self codeFontName.
 	aBlStyler
@@ -230,43 +316,68 @@ ToAlbum >> text: aBlText [
 
 	aBlText == self text ifTrue: [ ^ self ].
 	self next text: aBlText.
-	self edited: false
+	self edited: false.
+	self requestNewSkin 
 ]
 
 { #category : #'event handling' }
 ToAlbum >> textChanged [
 
-	self invalidate; requestLayout
+	self
+		invalidate;
+		requestLayout
+]
+
+{ #category : #'api - displaying' }
+ToAlbum >> toThemeInstalled [
+
+	self editor restoreText: self text.
+	super toThemeInstalled.
+
+]
+
+{ #category : #accessing }
+ToAlbum >> useScrollbar [
+
+	^ useScrollbar
+]
+
+{ #category : #accessing }
+ToAlbum >> useScrollbar: aBoolean [
+
+	self useScrollbar = aBoolean ifTrue: [ ^ self ].
+	useScrollbar := aBoolean.
+	self requestConfiguration
 ]
 
 { #category : #'transaction hook' }
 ToAlbum >> whenCancelRequestedDo: aBlock [
 
-	self addEventHandler: (BlEventHandler
-			 on: ToAlbumCancelRequestedEvent
-			 do: aBlock)
+	^ self addEventHandlerOn: ToAlbumCancelRequestedEvent do: aBlock
+]
+
+{ #category : #'transaction hook' }
+ToAlbum >> whenFlashRequestedDo: aBlock [
+
+	^ self addEventHandlerOn: ToAlbumFlashRequestedEvent do: aBlock
 ]
 
 { #category : #'transaction hook' }
 ToAlbum >> whenSaveAcceptedDo: aBlock [
 
-	self addEventHandler: (BlEventHandler
-			 on: ToAlbumSaveAcceptedEvent
-			 do: aBlock)
+	^ self addEventHandlerOn: ToAlbumSaveAcceptedEvent do: aBlock
 ]
 
 { #category : #'transaction hook' }
 ToAlbum >> whenSaveDeniedDo: aBlock [
 
-	self when: ToAlbumSaveDeniedEvent do: aBlock
+	^ self addEventHandlerOn: ToAlbumSaveDeniedEvent do: aBlock
 ]
 
 { #category : #'transaction hook' }
 ToAlbum >> whenSaveRequestedDo: aBlock [
 
-	self addEventHandler: (BlEventHandler
-			 on: ToAlbumSaveRequestedEvent
-			 do: aBlock)
+	^ self addEventHandlerOn: ToAlbumSaveRequestedEvent do: aBlock
 ]
 
 { #category : #'styler configuration' }
@@ -287,6 +398,12 @@ ToAlbum >> whenStylerTextStyled: aBlStylerTextStyledAnnouncement [
 	self textInternalRepresentationChanged
 ]
 
+{ #category : #'transaction hook' }
+ToAlbum >> whenTextEditedDo: aBlock [
+
+	^ self addEventHandlerOn: AlbTextEditedEvent do: aBlock
+]
+
 { #category : #'styler configuration' }
 ToAlbum >> whenTextStyleRequested: aToTextStyleRequested [
 
@@ -298,18 +415,17 @@ ToAlbum >> whenTextStyleRequested: aToTextStyleRequested [
 ]
 
 { #category : #layers }
-ToAlbum >> withEditsFeedback [
+ToAlbum >> withEditsFeedback: aBoolean [
 
-	editsFeedbackLayer ifNotNil: [ ^ self ].
-	editsFeedbackLayer := ToAlbumEditsFeedbackLayer new.
-	editsFeedbackLayer attachTo: self.
-	self addChild: editsFeedbackLayer
+	aBoolean
+		ifTrue: [ self addEditsFeedbackLayer ]
+		ifFalse: [ self removeEditsFeedbackLayer ]
 ]
 
 { #category : #initialization }
 ToAlbum >> withSaveCapability [
 
-	self withEditsFeedback.
+	self addEditsFeedbackLayer.
 
 	self addEditorShortcut: (BlShortcutWithAction new
 			 combination: BlKeyCombination primaryS;
@@ -321,21 +437,4 @@ ToAlbum >> withSaveCapability [
 			 action: [ :aShortcutEvent :aShortcut | self requestCancel ];
 			 name: 'Cancel';
 			 description: 'Cancel changes and rollback the previous accepted source code.')
-]
-
-{ #category : #layers }
-ToAlbum >> withoutEditsFeedback [
-
-	editsFeedbackLayer ifNil: [ ^ self ].
-
-	editsFeedbackLayer detach.
-	self removeChild: editsFeedbackLayer.
-
-	editsFeedbackLayer := nil
-]
-
-{ #category : #layers }
-ToAlbum >> withoutPlaceholder [ 
-
-	self hidePlaceholder 
 ]

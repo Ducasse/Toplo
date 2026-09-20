@@ -1,19 +1,23 @@
 Class {
 	#name : #ToLabelEditorWindow,
 	#superclass : #ToAnchoredWindow,
-	#category : #'Toplo-Widget-Album-Label'
+	#category : #'Toplo-Widget-Album-LabelEditor'
 }
 
-{ #category : #initialization }
+{ #category : #accessing }
+ToLabelEditorWindow >> closedEventClass [ 
+
+	^ ToLabelEditorWindowClosedEvent 
+]
+
+{ #category : #accessing }
 ToLabelEditorWindow >> defaultElevation [
 
 	^ BlRelativeElevation elevation: (SmallInteger maxVal - 200)
 ]
 
-{ #category : #skin }
-ToLabelEditorWindow >> installRawStyle [ 
+{ #category : #accessing }
+ToLabelEditorWindow >> openedEventClass [ 
 
-	super installRawStyle.
-	self border: BlBorder empty.
-
+	^ ToLabelEditorWindowOpenedEvent 
 ]

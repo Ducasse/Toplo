@@ -1,21 +1,39 @@
 Class {
 	#name : #ToCustomMenuItem,
 	#superclass : #ToMenuItemElement,
-	#instVars : [
-		'innerElement'
-	],
-	#category : #'Toplo-Widget-Menu-Basic'
+	#category : #'Toplo-Widget-Menu-Items'
 }
 
-{ #category : #accessing }
-ToCustomMenuItem >> innerElement [
+{ #category : #initialization }
+ToCustomMenuItem >> initialize [ 
 
-	^ innerElement
+	super initialize.
+	self closeOnPicking: false
 ]
 
-{ #category : #accessing }
-ToCustomMenuItem >> innerElement: anElement [
+{ #category : #testing }
+ToCustomMenuItem >> isOutsideEvent: anEvent [
 
-	innerElement := anElement.
-	self addChild: anElement
+	(self children allSatisfy: [ :child | child isOutsideEvent: anEvent ])
+		ifFalse: [ ^ false ].
+	^ super isOutsideEvent: anEvent
+]
+
+{ #category : #testing }
+ToCustomMenuItem >> isSelectable [
+
+	^ false
+]
+
+{ #category : #'adding-removing' }
+ToCustomMenuItem >> onAddedInItemBarOwner: aMenu [
+
+	self unselectable: true
+]
+
+{ #category : #'adding-removing' }
+ToCustomMenuItem >> onRemovedFromItemBarOwner: aMenu [
+
+	self unselectable: false
+
 ]

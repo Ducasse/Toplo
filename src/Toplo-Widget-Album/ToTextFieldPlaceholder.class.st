@@ -11,13 +11,8 @@ ToTextFieldPlaceholder >> initialize [
 	self layout alignCenterLeft
 ]
 
-{ #category : #initialization }
-ToTextFieldPlaceholder >> installRawStyle [
+{ #category : #skin }
+ToTextFieldPlaceholder >> newRawSkin [ 
 
-	super installRawStyle.
-	self flag:
-		'Have to dig why a + 1 is required here to have the placeholder content exactly at the same x-ordinate than the first edited character'.
-	self padding: (BlInsets
-			 horizontal: (self valueOfTokenNamed: #'padding-XS') + 2
-			 vertical: (self valueOfTokenNamed: #'text-editor-padding-V'))
+	^ ToTextFieldPlaceholderSkin new
 ]

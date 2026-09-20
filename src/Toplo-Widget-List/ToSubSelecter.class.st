@@ -2,26 +2,22 @@ Class {
 	#name : #ToSubSelecter,
 	#superclass : #ToListSelecter,
 	#instVars : [
-		'uniqueId',
 		'parentSelecter'
 	],
 	#category : #'Toplo-Widget-List-Selection-Selecter'
 }
 
 { #category : #initialization }
-ToSubSelecter >> initializeCommandApplier [ 
+ToSubSelecter >> defaultCommandApplicationStrategy [
 
-	super initializeCommandApplier
-	"commandApplierEventHandler := ToQueueBasedCommandApplierEventHandler new."
-	"commandApplierEventHandler weak: true"
+	^ BlImmediateCommandApplicationStrategy new
 ]
 
 { #category : #'api - hooks' }
 ToSubSelecter >> onInstalledIn: anEventTarget [
 
-
 	super onInstalledIn: anEventTarget.
-	selectionModel uniqueId: uniqueId.
+	selectionModel uniqueId: selectionChangedEventClass.
 	parentSelecter recordSubSelecter: self
 
 ]
@@ -45,17 +41,4 @@ ToSubSelecter >> parentSelecter: aCompositeSelecter [
 
 	parentSelecter ifNotNil: [ BlImmutableObjectChangeError signal ].
 	parentSelecter := aCompositeSelecter
-]
-
-{ #category : #accessing }
-ToSubSelecter >> uniqueId [
-
-	^ uniqueId
-]
-
-{ #category : #accessing }
-ToSubSelecter >> uniqueId: aSymbol [
-
-	uniqueId ifNotNil: [ BlImmutableObjectChangeError signal ].
-	uniqueId := aSymbol
 ]

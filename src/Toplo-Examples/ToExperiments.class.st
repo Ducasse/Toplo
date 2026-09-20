@@ -1,7 +1,7 @@
 Class {
 	#name : #ToExperiments,
 	#superclass : #Object,
-	#category : #'Toplo-Examples'
+	#category : #'Toplo-Examples-Experiments'
 }
 
 { #category : #accessing }
@@ -17,7 +17,7 @@ AeFontStretch: condensed expanded extraCondensed extraExpanded normal semiConden
 	allChars := 'azertyuiopqsdfghjklmwxcvbn' , String cr , 'AZERTYUIOPQSDFGHJKLMWXCVBN' , String cr , '1234567890'
 	            , String cr , '@&é"''[(§è!çà)]-#°_¨*%£+/*.?' , String cr , '~^$`ù=:;,~|'.
 	"AeFontManager resetGlobalInstance."
-	aManager := AeFontManager globalInstance .
+	aManager := AeFontManager new scanEmbeddedFonts; yourself.
 	allSlants := { 
 		             BlFontSlant normal.
 		             BlFontSlant italic.
@@ -70,21 +70,38 @@ AeFontStretch: condensed expanded extraCondensed extraExpanded normal semiConden
 	^ text
 ]
 
+{ #category : #tree }
+ToExperiments class >> example_ClassTree [
+
+	| tree childrenHook pane |
+	pane := self newTreePane.
+	tree := pane childWithId: #treeElement.
+	childrenHook := [ :aClass | aClass subclasses ].
+
+	tree dataAccessor add: (ToExTreeDataWrapper new
+			 dataAccessor: tree dataAccessor;
+			 wrapped: ToElement;
+			 childrenHook: childrenHook;
+			 yourself).
+			
+	pane openInInnerWindow
+]
+
 { #category : #'drag and drop' }
 ToExperiments class >> example_DragAndDropWithLinearLayout [
 
-	| container red blue space  |
+	| container red blue space |
 	container := ToPane new id: #container.
 	container border: Color black.
 	container matchParent.
 	container layout: BlLinearLayout new.
-	container setUpAsPasteUp.
+	container initializeAsPasteUp.
 
 	red := ToElement new id: #red.
-	red size: 100 asPoint.
+	red extent: 100 asPoint.
 	red background: Color red.
 	blue := ToElement new id: #blue.
-	blue size: 50 asPoint.
+	blue extent: 50 asPoint.
 	blue background: Color blue.
 
 	container addChildren: {
@@ -95,10 +112,10 @@ ToExperiments class >> example_DragAndDropWithLinearLayout [
 	space show.
 
 	blue
-		when: BlDragEnterEvent
+		addEventHandlerOn: BlDragEnterEvent
 		do: [ :event | blue border: (BlBorder paint: Color yellow width: 5) ].
 	blue
-		when: BlDragLeaveEvent
+		addEventHandlerOn: BlDragLeaveEvent
 		do: [ :event | blue border: BlBorder empty ]
 ]
 
@@ -133,7 +150,6 @@ ToExperiments class >> example_ExperimentForMultilineLabel0 [
 		           addChildren:
 			           (l collect: [ :w | w asElement editorMeasurement ]).
 	element border: (BlBorder paint: Color gray width: 1).
-	element inspect.
 	element openInSpace
 ]
 
@@ -186,7 +202,7 @@ ToExperiments class >> example_ExperimentForMultilineLabel3 [
 				               addChildren: (cutted collect: [ :w | w asElement editorMeasurement ]).
 			root addChild: lineElement ] ].
 
-	root openInOBlSpace
+	root openInSpace
 ]
 
 { #category : #elements }
@@ -219,7 +235,7 @@ ToExperiments class >> example_ExperimentForMultilineLabel4 [
 							                w asElement editorMeasurement ]).
 			root addChild: lineElement ] ].
 
-	root openInOBlSpace
+	root openInSpace
 ]
 
 { #category : #elements }
@@ -261,11 +277,11 @@ ToExperiments class >> example_FlowLayoutHorizontal [
 	| frame left right fill |
 	frame := BlElement new
 		         background: Color gray;
-		         size: 300 @ 100;
+		         extent: 300 @ 100;
 		         layout: BlLinearLayout horizontal;
-		         constraintsDo: [ :c | 
-			         c horizontal matchParent.
-			         c vertical fitContent ].
+		         constraintsDo: [ :c |
+				         c horizontal matchParent.
+				         c vertical fitContent ].
 	"frame layout cellSpacing: 10."
 	left := BlElement new
 		        background: Color blue;
@@ -274,9 +290,14 @@ ToExperiments class >> example_FlowLayoutHorizontal [
 
 	fill := BlElement new
 		        background: Color yellow;
-		        height: 20; width: 200;
-		        constraintsDo: [ :c | c minWidth: 50. c flow  newLine: false. c flow vertical alignCenter. c linear vertical alignCenter].
-			
+		        height: 20;
+		        width: 200;
+		        constraintsDo: [ :c |
+				        c minWidth: 50.
+				        c flow newLine: false.
+				        c flow vertical alignCenter.
+				        c linear vertical alignCenter ].
+
 	right := BlElement new
 		         background: Color red;
 		         width: 100;
@@ -294,11 +315,11 @@ ToExperiments class >> example_FrameLayout [
 	| frame left right fill |
 	frame := BlElement new
 		         background: Color gray;
-		         size: 300 @ 100;
+		         extent: 300 @ 100;
 		         layout: BlFrameLayout new;
-		         constraintsDo: [ :c | 
-			         c horizontal matchParent.
-			         c vertical fitContent ].
+		         constraintsDo: [ :c |
+				         c horizontal matchParent.
+				         c vertical fitContent ].
 
 	left := BlElement new
 		        background: Color blue;
@@ -307,9 +328,9 @@ ToExperiments class >> example_FrameLayout [
 	fill := BlElement new
 		        background: Color yellow;
 		        height: 20;
-		        constraintsDo: [ :c | 
-			        c frame horizontal alignCenter.
-			        c minWidth: 50 ].
+		        constraintsDo: [ :c |
+				        c frame horizontal alignCenter.
+				        c minWidth: 50 ].
 	right := BlElement new
 		         background: Color red;
 		         width: 100;
@@ -321,17 +342,40 @@ ToExperiments class >> example_FrameLayout [
 	frame openInNewSpace
 ]
 
+{ #category : #tree }
+ToExperiments class >> example_IntegerTree [
+
+	| tree nbItems rand childrenHook pane |
+	nbItems := 50000.
+	rand := Random new.
+	pane := self newTreePane.
+	tree := pane childWithId: #treeElement.
+	childrenHook := [ :anInteger |
+	                | nb |
+	                nb := rand nextIntegerBetween: 0 and: 4.
+	                1 to: nb ].
+
+	tree dataAccessor addAll: ((1 to: nbItems) collect: [ :anInteger |
+			 ToExTreeDataWrapper new
+				 dataAccessor: tree dataAccessor;
+				 wrapped: anInteger;
+				 childrenHook: childrenHook;
+				 yourself ]).
+
+	pane openInInnerWindow
+]
+
 { #category : #frame }
 ToExperiments class >> example_LinearLayout [
 
 	| frame left right fill |
 	frame := BlElement new
 		         background: Color gray;
-		         size: 300 @ 100;
+		         extent: 300 @ 100;
 		         layout: BlLinearLayout new;
 		         constraintsDo: [ :c |
-			         c horizontal matchParent.
-			         c vertical fitContent ].
+				         c horizontal matchParent.
+				         c vertical fitContent ].
 
 	left := BlElement new
 		        background: Color blue;
@@ -342,8 +386,8 @@ ToExperiments class >> example_LinearLayout [
 		        background: Color yellow;
 		        height: 20;
 		        constraintsDo: [ :c |
-			        c horizontal matchParent.
-			        c minWidth: 50 ].
+				        c horizontal matchParent.
+				        c minWidth: 50 ].
 	fill
 		addEventHandlerOn: BlElementExtentChangedEvent
 		do: [ :ann | fill width traceCr ].
@@ -414,11 +458,11 @@ ToExperiments class >> example_LinearLayoutFillWithMatchParent [
 	| frame left right fill |
 	frame := BlElement new
 		         background: Color gray;
-		         size: 300 @ 100;
+		         extent: 300 @ 100;
 		         layout: BlLinearLayout new;
 		         constraintsDo: [ :c |
-			         c horizontal matchParent.
-			         c vertical fitContent ].
+				         c horizontal matchParent.
+				         c vertical fitContent ].
 	frame layout cellSpacing: 10.
 	left := BlElement new
 		        background: Color blue;
@@ -429,8 +473,8 @@ ToExperiments class >> example_LinearLayoutFillWithMatchParent [
 		        background: Color yellow;
 		        height: 20;
 		        constraintsDo: [ :c |
-			        c horizontal matchParent.
-			        c minWidth: 50 ].
+				        c horizontal matchParent.
+				        c minWidth: 50 ].
 	fill
 		addEventHandlerOn: BlElementExtentChangedEvent
 		do: [ :ann | fill width traceCr ].
@@ -450,20 +494,117 @@ ToExperiments class >> example_LinearLayoutWithLabels [
 
 	| frame |
 	frame := ToElement new
-		         size: 300 @ 100;
+		         extent: 300 @ 100;
 		         layout: BlLinearLayout new;
 		         constraintsDo: [ :c |
-			         c horizontal matchParent.
-			         c vertical fitContent ].
+				         c horizontal matchParent.
+				         c vertical fitContent ].
 	1 to: 5 do: [ :idx |
-		frame addChild: (ToLabel new
-				 text: idx asString;
-				 background: Color random;
-				 fitContent;
-				 border: (BlBorder paint: Color black width: 1);
-				 yourself) ].
+			frame addChild: (ToLabel new
+					 text: idx asString;
+					 background: Color random;
+					 fitContent;
+					 border: (BlBorder paint: Color black width: 1);
+					 yourself) ].
 	frame firstChild width: 60.
 	frame openInNewSpace
+]
+
+{ #category : #menu }
+ToExperiments class >> example_MenuAroundCircle [
+
+	| pane innerCircle outerCircle nb gap circleSize |
+	circleSize := 400.
+	pane := ToElement new
+		        id: #pane;
+		        yourself.
+	pane constraintsDo: [ :c |
+			c horizontal matchParent.
+			c vertical matchParent ].
+	pane border: Color red.
+	pane layout: BlAnchorLayout new.
+	pane geometry: BlCircleGeometry new.
+	pane extent: (circleSize + 10) asPoint.
+	pane border: Color red.
+	innerCircle := ToElement new
+		          id: #blue;
+		          yourself.
+	innerCircle geometry: BlCircleGeometry new.
+	
+	innerCircle extent: circleSize asPoint.
+	innerCircle margin: (BlInsets all: (circleSize / 2) negated).
+	innerCircle constraintsDo: [ :c |
+			c ignoreByLayout.
+			c anchors add:
+				(c anchors centerAnchor on: c anchors parent centerAnchor) ].
+	pane addChild: innerCircle.
+	outerCircle := ToElement new
+		          id: #blue;
+		          yourself.
+	innerCircle background: Color blue.
+	outerCircle geometry: BlCircleGeometry new.
+	outerCircle margin: (BlInsets all: (circleSize / 8) negated).
+	outerCircle extent: circleSize asPoint.
+	outerCircle constraintsDo: [ :c |
+			c ignoreByLayout.
+			c anchors add:
+				(c anchors centerAnchor on: c anchors parent centerAnchor) ].
+	pane addChild: outerCircle.
+
+	nb := 6.
+	gap := (360 / nb) asInteger.
+	1 to: nb do: [ :n |
+			| degrees subMenu sector |
+			degrees := n * gap.
+			subMenu := ToMenu new.
+			subMenu builder: [ :sm |
+					1 to: 2 do: [ :index |
+							| stream iconImage color |
+							stream := String streamContents: [ :out |
+									          out
+										          nextPutAll: 'Level ';
+										          space;
+										          print: index ].
+							color := Color random.
+							iconImage := BlElement new
+								             padding: (BlInsets all: 2);
+								             geometry:
+									             (BlRoundedRectangleGeometry cornerRadius: 3);
+								             background: color;
+								             extent: 16 asPoint;
+								             yourself.
+							sm addItem: ((ToMenuItem new
+									  labelText: stream;
+									  iconImage: iconImage)
+									 clickAction: [ pane background: color ];
+									 yourself) ] ].
+			degrees traceCr.
+			sector := (BlAnnulusSectorGeometry new
+				           startAngle: degrees - gap;
+				           endAngle: degrees;
+				           yourself) asElement.
+			sector
+				extent: circleSize asPoint;
+				yourself.
+			sector border: Color veryLightGray.
+			sector addEventHandlerOn: BlMouseEnterEvent do: [ sector border: Color red ].
+			sector addEventHandlerOn: BlMouseLeaveEvent do: [ sector border: Color veryLightGray ].
+			subMenu labelText: degrees asString , '°'.
+
+			subMenu constraintsDo: [ :c |
+					c ignoreByLayout.
+					c anchors add: (c anchors centerAnchor on:
+							 (outerCircle perimeterAnchor degrees: degrees)) ].
+			sector constraintsDo: [ :c |
+					c ignoreByLayout.
+					c anchors add: (c anchors horizontalCenterAnchor on:
+							 (innerCircle perimeterAnchor degrees: degrees + gap) ) ].
+			pane addChild: sector.
+			subMenu elevation: (BlRelativeElevation elevation: 10).
+			pane addChild: subMenu ].
+
+	pane openInSpace.
+	^ innerCircle
 ]
 
 { #category : #'drag and drop' }
@@ -474,13 +615,13 @@ ToExperiments class >> example_PasteUpPane [
 	container border: Color black.
 	container matchParent.
 	container layout: BlBasicLayout new.
-	container setUpAsPasteUp.
+	container initializeAsPasteUp.
 
 	red := ToElement new id: #red.
-	red size: 100 asPoint.
+	red extent: 100 asPoint.
 	red background: Color red.
 	blue := ToElement new id: #blue.
-	blue size: 50 asPoint.
+	blue extent: 50 asPoint.
 	blue background: Color blue.
 
 	container addChildren: {
@@ -507,16 +648,16 @@ ToExperiments class >> example_PasteUpWithPlaceHolder [
 	container layout: BlBasicLayout new.
 	container matchParent.
 	container placeholderBuilder: [ :placeholder :e |
-		placeholder preventMeAndChildrenMouseEvents.
-		phpane := placeholder.
-		phpane layout: BlBasicLayout new ].
+			placeholder preventMeAndChildrenMouseEvents.
+			phpane := placeholder.
+			phpane layout: BlBasicLayout new ].
 	container showPlaceholder.
 
 	red := ToElement new id: #red.
-	red size: 100 asPoint.
+	red extent: 100 asPoint.
 	red background: Color red.
 	blue := ToElement new id: #blue.
-	blue size: 50 asPoint.
+	blue extent: 50 asPoint.
 	blue background: Color blue.
 
 	container addChildren: {
@@ -526,85 +667,48 @@ ToExperiments class >> example_PasteUpWithPlaceHolder [
 	space root addChild: container.
 	space show.
 
-	container when: BlDragStartEvent do: [ :event |
-		| dragged |
-		event consume.
-		dragged := container findMouseEventTargetAt: event position.
-		(dragged notNil and: [ dragged ~= container ]) ifTrue: [
-			pred := event position - dragged position.
-			container detachChild: dragged.
-			phpane attachChild: dragged ] ].
-
-	container when: BlDragEvent do: [ :event |
-		event consume.
-		phpane hasChildren ifTrue: [
+	container addEventHandlerOn: BlDragStartEvent do: [ :event |
 			| dragged |
-			dragged := phpane firstChild.
-			dragged position: event position - pred ] ].
+			event consume.
+			dragged := container findMouseEventTargetAt: event position.
+			(dragged notNil and: [ dragged ~= container ]) ifTrue: [
+					pred := event position - dragged position.
+					container detachChild: dragged.
+					phpane attachChild: dragged ] ].
 
-	container when: BlDragEndEvent do: [ :event |
-		event consume.
-		phpane hasChildren ifTrue: [
-			| dragged |
-			dragged := phpane firstChild.
-			dragged position: event position - pred.
-			phpane detachChild: dragged.
-			container attachChild: dragged ] ].
+	container addEventHandlerOn: BlDragEvent do: [ :event |
+			event consume.
+			phpane hasChildren ifTrue: [
+					| dragged |
+					dragged := phpane firstChild.
+					dragged position: event position - pred ] ].
 
-	blue when: BlDragStartEvent do: [ :event |
-		pblue := event position - blue position.
-		event consume ].
-	blue when: BlDragEvent do: [ :event |
-		event consume.
-		blue position: event position - pblue.
-		blue forceLayout ].
-	blue when: BlDragEndEvent do: [ :event | event consume ].
+	container addEventHandlerOn: BlDragEndEvent do: [ :event |
+			event consume.
+			phpane hasChildren ifTrue: [
+					| dragged |
+					dragged := phpane firstChild.
+					dragged position: event position - pred.
+					phpane detachChild: dragged.
+					container attachChild: dragged ] ].
+
+	blue addEventHandlerOn: BlDragStartEvent do: [ :event |
+			pblue := event position - blue position.
+			event consume ].
+	blue addEventHandlerOn: BlDragEvent do: [ :event |
+			event consume.
+			blue position: event position - pblue ].
+	blue addEventHandlerOn: BlDragEndEvent do: [ :event | event consume ].
 
 	blue
-		when: BlDragEnterEvent
+		addEventHandlerOn: BlDragEnterEvent
 		do: [ :event | blue border: (BlBorder paint: Color yellow width: 5) ].
 	blue
-		when: BlDragLeaveEvent
-		do: [ :event | blue border: BlBorder empty ]
-
-	"red when: BlDragEnterEvent do: [ :event | event consume. red background: Color random ].
-red when: BlDragLeaveEvent do: [ :event | event consume. red background: Color red ].
+		addEventHandlerOn: BlDragLeaveEvent
+		do: [ :event | "red addEventHandlerOn: BlDragEnterEvent do: [ :event | event consume. red background: Color random ].
+red addEventHandlerOn: BlDragLeaveEvent do: [ :event | event consume. red background: Color red ].
 "
-]
-
-{ #category : #image }
-ToExperiments class >> example_Smalltalk_all_classes [
-
-| column root vscrollBar container space |
-	column := BlElement new
-		          layout: BlLinearLayout vertical;
-		          constraintsDo: [ :c | 
-			          c horizontal matchParent.
-			          c vertical fitContent ];
-		          yourself.
-	1 timesRepeat: [ 
-	Object allSubclassesDo: [ :cls | 
-		| lab |
-		lab := ToLabel new text: cls name asRopedText.
-		column addChild: lab ] ].
-
-	root := column asScrollableElement.
-	vscrollBar := BlVerticalScrollbarElement new.
-	vscrollBar constraintsDo: [ :c |
-			c ignoreByLayout.
-			c margin: (BlInsets right: 2).
-			c ignored horizontal alignRight.
-			c ignored vertical alignBottom]. 
-	vscrollBar attachTo: root.
-	container := BlElement new
-		          constraintsDo: [ :c | 
-			          c horizontal matchParent.
-			          c vertical matchParent ];
-		          yourself.
-	container addChild: root; addChild: vscrollBar.
-	space := BlSpace new.
-	space addChild: container.
-	space show
+			blue border: BlBorder empty ]
 ]
 
 { #category : #image }
@@ -664,22 +768,22 @@ ToExperiments class >> example_TextFlowWithBlElements [
 	element := BlElement new
 		           layout: (AlbLineFlowLayout new lineSpacing: 10);
 		           constraintsDo: [ :c |
-			           c minWidth: 50.
-			           c horizontal matchParent.
-			           c vertical matchParent ];
+				           c minWidth: 50.
+				           c horizontal matchParent.
+				           c vertical matchParent ];
 		           addChildren: (20 timesCollect: [
-					            | anAnimation |
-					            anAnimation := BlSequentialAnimation new.
-					            anAnimation add:
-							            (BlTransformAnimation scale: 2) absolute.
-					            anAnimation add:
-							            (BlTransformAnimation scale: 0.5) absolute.
-					            anAnimation beInfinite.
-					            BlElement new
-						            size: 50 @ 20;
-						            margin: (BlInsets all: 4);
-						            background: (Color random alpha: 0.5);
-						            addAnimation: anAnimation ]).
+						            | anAnimation |
+						            anAnimation := BlSequentialAnimation new.
+						            anAnimation add:
+								            (BlTransformAnimation scale: 2) absolute.
+						            anAnimation add:
+								            (BlTransformAnimation scale: 0.5) absolute.
+						            anAnimation beInfinite.
+						            BlElement new
+							            extent: 50 @ 20;
+							            margin: (BlInsets all: 4);
+							            background: (Color random alpha: 0.5);
+							            addAnimation: anAnimation ]).
 	element openInSpace
 ]
 
@@ -688,36 +792,107 @@ ToExperiments class >> example_TextFlowWithBlElements2 [
 
 	| element |
 	element := BlElement new
-		           layout: (BlLinearLayout new);
+		           layout: BlLinearLayout new;
 		           constraintsDo: [ :c |
-			           c minWidth: 50.
-			           c horizontal matchParent.
-			           c vertical matchParent ];
+				           c minWidth: 50.
+				           c horizontal matchParent.
+				           c vertical matchParent ];
 		           addChildren: (20 timesCollect: [
-					            | anAnimation e parent |
-					            anAnimation := BlSequentialAnimation new.
-					            anAnimation add:
-							            (BlTransformAnimation scale: 2) absolute.
-					            anAnimation add:
-							            (BlTransformAnimation scale: 0.5) absolute.
-					            anAnimation beInfinite.
-					            parent := BlElement new
-						                      layout:
-							                      (BlWrapAroundChildrenLayout new
-								                       addLayout: BlBasicNodeBasedLayout new);
-						                      constraintsDo: [ :c |
-							                      c horizontal fitContent.
-							                      c vertical fitContent ];
-						                      background: (Color gray alpha: 0.2).
-					            e := BlElement new
-						                 size: 50 @ 20;
-						                 margin: (BlInsets all: 4);
-						                 background: (Color random alpha: 0.5);
-						                 addAnimation: anAnimation.
-					            parent
-						            addChild: e;
-						            yourself ]).
+						            | anAnimation e parent |
+						            anAnimation := BlSequentialAnimation new.
+						            anAnimation add:
+								            (BlTransformAnimation scale: 2) absolute.
+						            anAnimation add:
+								            (BlTransformAnimation scale: 0.5) absolute.
+						            anAnimation beInfinite.
+						            parent := BlElement new
+							                      layout:
+								                      (BlWrapAroundChildrenLayout new
+									                       addLayout: BlBasicNodeBasedLayout new);
+							                      constraintsDo: [ :c |
+									                      c horizontal fitContent.
+									                      c vertical fitContent ];
+							                      background: (Color gray alpha: 0.2).
+						            e := BlElement new
+							                 extent: 50 @ 20;
+							                 margin: (BlInsets all: 4);
+							                 background: (Color random alpha: 0.5);
+							                 addAnimation: anAnimation.
+						            parent
+							            addChild: e;
+							            yourself ]).
 	element openInNewSpace
+]
+
+{ #category : #collapse }
+ToExperiments class >> example_collapse1 [
+
+	| container opened bgPaint openedAnimation collapsed closedAnimation openCollapsedBlock bar collapsedChild |
+	container := BlElement new
+		             layout: BlLinearLayout vertical;
+		             constraintsDo: [ :c |
+				             c horizontal fitContent.
+				             c vertical fitContent ];
+		             yourself.
+
+	opened := true.
+
+	bgPaint := BlLinearGradientPaint vertical
+		           from: Color lightGreen
+		           to: Color lightRed.
+
+
+	openedAnimation := BlNumberTransition new
+		                   from: 0;
+		                   to: 150;
+		                   duration: 0.2 second;
+		                   onStepDo: [ :point | collapsed height: 0 + point ].
+	closedAnimation := BlNumberTransition new
+		                   from: 0;
+		                   to: 150;
+		                   duration: 0.2 second;
+		                   onStepDo: [ :point |
+			                   collapsed height: 150 - point + 0.01 ].
+
+	openCollapsedBlock := [
+		                      opened
+			                      ifTrue: [
+			                      collapsed addAnimation: openedAnimation copy ]
+			                      ifFalse: [
+			                      collapsed addAnimation: closedAnimation copy ] ].
+
+	bar := BlElement new
+		       background: Color lightBlue;
+		       extent: 250 @ 50;
+		       addEventHandlerOn: BlClickEvent do: [ :e |
+				       e consume.
+				       opened := opened not.
+				       openCollapsedBlock value ];
+		       yourself.
+
+	collapsed := BlElement new
+		             background: bgPaint;
+		             extent: 250 @ 150;
+		             border: (BlBorderBuilder new
+				              paint: Color red;
+				              width: 3;
+				              dashed;
+				              build);
+		             yourself.
+
+	collapsedChild := BlElement new
+		                  background: Color purple;
+		                  extent: 50 @ 100;
+		                  position: 50 asPoint;
+		                  yourself.
+	collapsed addChild: collapsedChild.
+
+	container addChild: bar.
+	container addChild: collapsed.
+	container border: (BlBorder paint: Color black width: 3).
+	container background: Color red.
+	container padding: (BlInsets all: 3).
+	container openInSpace
 ]
 
 { #category : #'mouse drag' }
@@ -726,24 +901,24 @@ ToExperiments class >> example_drag [
 	| e child p |
 	e := BlElement new
 		     background: Color red;
-		     size: 500 @ 500.
+		     extent: 500 @ 500.
 
 	child := BlElement new
 		         background: Color yellow;
-		         size: 50 @ 50;
+		         extent: 50 @ 50;
 		         position: 20 @ 20.
 
 	e addChild: child.
 
-	child when: BlDragStartEvent do: [ :evt |
-		p := evt position - child position.
-		evt consume ].
+	child addEventHandlerOn: BlDragStartEvent do: [ :evt |
+			p := evt position - child position.
+			evt consume ].
 
 	child
-		when: BlDragEvent
+		addEventHandlerOn: BlDragEvent
 		do: [ :evt | child position: evt position - p ].
 
-	e openInNewSpace
+	e openInSpace
 ]
 
 { #category : #'mouse drag' }
@@ -752,11 +927,11 @@ ToExperiments class >> example_drag2 [
 	| e child |
 	e := BlElement new
 		     background: Color red;
-		     size: 500 @ 500.
+		     extent: 500 @ 500.
 
 	child := BlElement new
 		         background: Color yellow;
-		         size: 50 @ 50;
+		         extent: 50 @ 50;
 		         position: 20 @ 20.
 
 	e addChild: child.
@@ -771,13 +946,13 @@ ToExperiments class >> example_drag3 [
 	| e child |
 	e := BlElement new
 		     background: Color red;
-		     size: 50 @ 50;
+		     extent: 50 @ 50;
 		     clipChildren: false;
 		     yourself.
 
 	child := BlElement new
 		         background: Color yellow;
-		         size: 50 @ 50;
+		         extent: 50 @ 50;
 		         position: 200 @ 200;
 		         yourself.
 
@@ -799,7 +974,7 @@ ToExperiments class >> example_drag4 [
 	child := ToImage new
 		         innerImage: (BlElement new
 				          background: Color yellow;
-				          size: 50 @ 50);
+				          extent: 50 @ 50);
 		         position: 200 @ 200;
 		         yourself.
 
@@ -825,7 +1000,7 @@ ToExperiments class >> example_elements_sandbox [
 			c horizontal fitContent .
 			c vertical fitContent ].
 	sp := BlSpace new.
-	sp addChild: root.
+	sp root addChild: root.
 	sp show
 ]
 
@@ -833,12 +1008,20 @@ ToExperiments class >> example_elements_sandbox [
 ToExperiments class >> example_enterLeave [
 
 	| e1 e2 space |
-	e1 := BlElement new background: Color yellow; size: 100@60.
-	e2 := BlElement new background: Color blue; preventMouseEvents.
-	e1 when: BlMouseEnterEvent do: [ :event | e2 relocate: e1 bounds bottomRight. e1 space addChild: e2 ].
-	e1 when: BlMouseLeaveEvent do: [ :event | e1 space removeChild: e2 ].
+	e1 := BlElement new
+		      background: Color yellow;
+		      extent: 100 @ 60.
+	e2 := BlElement new
+		      background: Color blue;
+		      preventMouseEvents.
+	e1 addEventHandlerOn: BlMouseEnterEvent do: [ :event |
+			e2 position: e1 bounds bottomRight.
+			e1 space root addChild: e2 ].
+	e1
+		addEventHandlerOn: BlMouseLeaveEvent
+		do: [ :event | e1 space root removeChild: e2 ].
 	space := BlSpace new.
-	space addChild: e1.
+	space root addChild: e1.
 	space show
 ]
 
@@ -849,7 +1032,7 @@ ToExperiments class >> example_frame [
 	bkg := Color veryLightGray alpha: 0.2.
 	frame := BlElement new
 		         background: Color white;
-		         size: 300 @ 100.
+		         extent: 300 @ 100.
 	frame geometry: (BlRoundedRectangleGeometry cornerRadius: 5).
 	frame border: (BlBorder paint: bkg width: 3).
 
@@ -863,25 +1046,30 @@ ToExperiments class >> example_frame [
 		         constraintsDo: [ :c | c horizontal matchParent ].
 	bar := BlElement new
 		       background: Color white;
-		       constraintsDo: [ :c | 
-			       c vertical fitContent.
-			       c horizontal matchParent ].
+		       constraintsDo: [ :c |
+				       c vertical fitContent.
+				       c horizontal matchParent ].
 	bar padding: (BlInsets all: 3).
 	bar background: bkg.
 	bar layout: (BlGridLayout horizontal cellSpacing: 2).
 	bar border: (BlBorder paint: bkg width: 3).
 	bar geometry: (BlRoundedRectangleGeometry cornerRadius: 5).
-	pullHandler := BlPullHandler new target: frame; yourself.
+	pullHandler := BlPullHandler new
+		               target: frame;
+		               yourself.
 	bar addEventHandler: pullHandler.
-	
-	close := ToButton new iconImage: Smalltalk ui theme windowCloseForm; labelText: 'close'.
-	close whenClickedDo: [ frame removeFromParent ].
+
+	close := ToButton new
+		         iconImage: Smalltalk ui theme windowCloseForm;
+		         labelText: 'close'.
+	close clickAction: [ frame removeFromParent ].
 	close background: Color transparent.
-	expand := ToButton new iconImage: Smalltalk ui theme windowMaximizeForm.
-	expand whenClickedDo: [ 
-		frame 
-			relocate: 0@0; 
-			size: frame parent size ].	
+	expand := ToButton new iconImage:
+		          Smalltalk ui theme windowMaximizeForm.
+	expand clickAction: [
+			frame
+				position: 0 @ 0;
+				size: frame parent size ].
 
 	title := ToLabel new
 		         text: 'Frame';
@@ -892,9 +1080,11 @@ ToExperiments class >> example_frame [
 	bar addChild: fill2.
 	bar addChild: expand.
 
-	root := BlElement new background: Color transparent; constraintsDo: [ :c | 
-			       c vertical matchParent.
-			       c horizontal matchParent ].
+	root := BlElement new
+		        background: Color transparent;
+		        constraintsDo: [ :c |
+				        c vertical matchParent.
+				        c horizontal matchParent ].
 
 	frame layout: BlLinearLayout vertical.
 	frame addChild: bar.
@@ -910,7 +1100,7 @@ ToExperiments class >> example_linearLayoutWithChildAlign [
 	child := ToElement new.
 	parent layout: BlLinearLayout new.
 	parent layout alignCenterRight.
-	child size: 50 @ 30.
+	child extent: 50 @ 30.
 	child layout: BlLinearLayout new.
 	parent addChild: child.
 	child background: Color yellow.
@@ -925,68 +1115,68 @@ ToExperiments class >> example_mouseEvent_descending_bubbling [
 
 	| gray blue yellow world |
 	yellow := ToInnerWindow new
-		          size: 450 @ 500;
+		          extent: 450 @ 500;
 		          in: [ :w | w root background: Color yellow ];
 		          position: 50 @ 50.
 	blue := ToInnerWindow new
 		        in: [ :w | w root background: Color blue ];
-		        size: 200 @ 200;
+		        extent: 200 @ 200;
 		        position: 150 @ 50;
 		        yourself.
 	gray := ToInnerWindow new
 		        in: [ :w | w root background: Color gray ];
-		        size: 100 @ 100;
+		        extent: 100 @ 100;
 		        position: 50 @ 50.
 	world := BlSpace new.
 
 	world root addEventHandler: (BlEventHandler
 			 on: BlMouseDownEvent
 			 do: [ :evt |
-				 ('bubbling world' , evt localPosition asString , ' '
-				  , evt position asString , ' ' , evt screenPosition asString)
-					 traceCr ]).
+					 ('bubbling world' , evt localPosition asString , ' '
+					  , evt position asString , ' ' , evt screenPosition asString)
+						 traceCr ]).
 	gray addEventHandler: (BlEventHandler
 			 on: BlMouseDownEvent
 			 do: [ :evt |
-				 ('bubbling gray' , evt localPosition asString , ' '
-				  , evt position asString , ' ' , evt screenPosition asString)
-					 traceCr ]).
+					 ('bubbling gray' , evt localPosition asString , ' '
+					  , evt position asString , ' ' , evt screenPosition asString)
+						 traceCr ]).
 	yellow addEventHandler: (BlEventHandler
 			 on: BlMouseDownEvent
 			 do: [ :evt |
-				 ('bubbling yellow' , evt localPosition asString , ' '
-				  , evt position asString , ' ' , evt screenPosition asString)
-					 traceCr ]).
+					 ('bubbling yellow' , evt localPosition asString , ' '
+					  , evt position asString , ' ' , evt screenPosition asString)
+						 traceCr ]).
 	blue addEventHandler: (BlEventHandler
 			 on: BlMouseDownEvent
 			 do: [ :evt |
-				 ('bubbling blue' , evt localPosition asString , ' '
-				  , evt position asString , ' ' , evt screenPosition asString)
-					 traceCr ]).
+					 ('bubbling blue' , evt localPosition asString , ' '
+					  , evt position asString , ' ' , evt screenPosition asString)
+						 traceCr ]).
 	world root addEventFilter: (BlEventHandler
 			 on: BlMouseDownEvent
 			 do: [ :evt |
-				 ('descending world' , evt localPosition asString , ' '
-				  , evt position asString , ' ' , evt screenPosition asString)
-					 traceCr ]).
+					 ('descending world' , evt localPosition asString , ' '
+					  , evt position asString , ' ' , evt screenPosition asString)
+						 traceCr ]).
 	gray addEventFilter: (BlEventHandler
 			 on: BlMouseDownEvent
 			 do: [ :evt |
-				 ('descending gray' , evt localPosition asString , ' '
-				  , evt position asString , ' ' , evt screenPosition asString)
-					 traceCr ]).
+					 ('descending gray' , evt localPosition asString , ' '
+					  , evt position asString , ' ' , evt screenPosition asString)
+						 traceCr ]).
 	yellow addEventFilter: (BlEventHandler
 			 on: BlMouseDownEvent
 			 do: [ :evt |
-				 ('descending yellow' , evt localPosition asString , ' '
-				  , evt position asString , ' ' , evt screenPosition asString)
-					 traceCr ]).
+					 ('descending yellow' , evt localPosition asString , ' '
+					  , evt position asString , ' ' , evt screenPosition asString)
+						 traceCr ]).
 	blue addEventFilter: (BlEventHandler
 			 on: BlMouseDownEvent
 			 do: [ :evt |
-				 ('descending blue' , evt localPosition asString , ' '
-				  , evt position asString , ' ' , evt screenPosition asString)
-					 traceCr ]).
+					 ('descending blue' , evt localPosition asString , ' '
+					  , evt position asString , ' ' , evt screenPosition asString)
+						 traceCr ]).
 	blue root addChild: gray.
 	yellow root addChild: blue.
 	world root addChild: yellow.
@@ -1000,7 +1190,7 @@ ToExperiments class >> example_rotation [
 	space := BlSpace new.
 
 	container := BlElement new
-		             size: 200 @ 200;
+		             extent: 200 @ 200;
 		             border: (BlBorder paint: Color lightRed width: 3);
 		             position: 200 @ 200;
 		             clipChildren: false.
@@ -1009,30 +1199,31 @@ ToExperiments class >> example_rotation [
 
 	expected := BlElement new
 		            background: Color lightGreen;
-		            size: 50 @ 100;
+		            extent: 50 @ 100;
 		            border: (BlBorder paint: Color orange width: 3).
 	container addChild: expected.
 
 	handle := BlElement new
 		          background: (Color lightBlue asBlBackground opacity: 0.5);
-		          size: 100 @ 50;
+		          extent: 100 @ 50;
 		          border: (BlBorder paint: Color red width: 3).
 
 	container addChild: handle.
 	button := BlElement new.
 	button layout: BlFrameLayout new.
-	button addChild: (BlTextElement text: 'Click to rotate by 90' asRopedText).
+	button addChild:
+		(BlTextElement text: 'Click to rotate by 90' asRopedText).
 	button padding: (BlInsets all: 5).
 	button border: (BlBorder paint: Color gray).
 	button constraintsDo: [ :c |
-		c horizontal fitContent.
-		c vertical fitContent ].
+			c horizontal fitContent.
+			c vertical fitContent ].
 	count := 0.
-	button when: BlClickEvent do: [
-		count := count + 1.
-		handle transformDo: [ :t |
-			t normalizedOrigin: 0.25 @ 0.5.
-			t rotateBy: count * 90 ] ].
+	button addEventHandlerOn: BlClickEvent do: [
+			count := count + 1.
+			handle transformDo: [ :t |
+					t normalizedOrigin: 0.25 @ 0.5.
+					t rotateBy: count * 90 ] ].
 	space root addChild: button.
 	space root addChild: container.
 
@@ -1046,7 +1237,7 @@ ToExperiments class >> example_rotationAnimation [
 	space := BlSpace new.
 
 	container := BlElement new
-		             size: 200 @ 200;
+		             extent: 200 @ 200;
 		             border: (BlBorder paint: Color lightRed width: 3);
 		             position: 50 @ 50;
 		             clipChildren: false.
@@ -1055,13 +1246,13 @@ ToExperiments class >> example_rotationAnimation [
 
 	expected := BlElement new
 		            background: Color lightGreen;
-		            size: 50 @ 100;
+		            extent: 50 @ 100;
 		            border: (BlBorder paint: Color orange width: 3).
 	container addChild: expected.
 
 	handle := BlElement new
 		          background: (Color lightBlue asBlBackground opacity: 0.5);
-		          size: 100 @ 50;
+		          extent: 100 @ 50;
 		          border: (BlBorder paint: Color red width: 3).
 
 	container addChild: handle.
@@ -1072,10 +1263,10 @@ ToExperiments class >> example_rotationAnimation [
 	anim := BlRepeatedTaskAction new
 		        delay: 300 milliSeconds;
 		        action: [
-			        handle transformDo: [ :t |
-					        count := count + 1.
-					        t normalizedOrigin: 0.25 @ 0.5.
-					        t rotateBy: 10 * count ] ].
+				        handle transformDo: [ :t |
+							        count := count + 1.
+							        t normalizedOrigin: 0.25 @ 0.5.
+							        t rotateBy: 10 * count ] ].
 	handle enqueueTask: anim
 ]
 
@@ -1090,41 +1281,7 @@ ToExperiments class >> example_space [
 		         borderless: true;
 		         extent: 50 @ 50.
 	space root background: Color red.
-	space show.
-	space inspect
-]
-
-{ #category : #'popup strategy' }
-ToExperiments class >> example_strategy [
-
-	| win blue red |
-	win := ToInnerWindow new
-		       id: #win;
-		       background: Color gray;
-		       size: 500 @ 400;
-		       position: 100 @ 100.
-
-	blue := ToElement new
-		        id: #blue;
-		        background: Color blue;
-		        size: 50 @ 50.
-
-	red := ToElement new
-		       id: #red;
-		       background: Color red;
-		       position: 100 @ 75;
-		       size: 50 @ 50.
-
-	win root addChild: red.
-	win root addChild: blue.
-	blue constraintsDo: [ :c | c ignoreByLayout ].
-	blue anchorLeft: red leftAnchor + 10.
-	blue anchorTop: red topAnchor + 10.
-	blue anchorBottom: red bottomAnchor - 10.
-	blue anchorRight: red rightAnchor - 10.
-
-	win openInOBlSpace.
-	win relocate: 100 @ 30
+	space show
 ]
 
 { #category : #frame }
@@ -1176,35 +1333,35 @@ ToExperiments class >> example_toScaling [
 
 	| space container |
 	container := ToElement new
-		             "constraintsDo: [ :c | c accountTransformation ];"
 		             layout: BlLinearLayout vertical;
 		             border: (BlBorder paint: Color black);
 		             fitContent;
 		             clipChildren: false.
+	"constraintsDo: [ :c | c accountTransformation ];"
 	container layout cellSpacing: 5.
 	container addChild: (ToButton new
 			 constraintsDo: [ :c | c accountTransformation ];
 			 clipChildren: false;
 			 iconImage: (BlElement new
-					  size: 100 @ 100;
+					  extent: 100 @ 100;
 					  background: Color blue);
 			 labelText: ('Blue' asRopedText fontSize: 24);
 			 transformDo: [ :d |
-				 d
-					 topLeftOrigin;
-					 scaleBy: 3.0 ]).
+					 d
+						 topLeftOrigin;
+						 scaleBy: 3.0 ]).
 	container addChild: (ToButton new
 			 constraintsDo: [ :c | c accountTransformation ];
 			 clipChildren: false;
 			 iconImage: (BlElement new
 					  constraintsDo: [ :c | c accountTransformation ];
-					  size: 100 @ 100;
+					  extent: 100 @ 100;
 					  background: Color red);
 			 labelText: ('red' asRopedText fontSize: 24);
 			 transformDo: [ :d |
-				 d
-					 topLeftOrigin;
-					 scaleBy: 2.0 ]).
+					 d
+						 topLeftOrigin;
+						 scaleBy: 2.0 ]).
 	space := BlSpace new.
 	container position: 100 @ 100.
 	space root addChild: container.
@@ -1214,38 +1371,56 @@ ToExperiments class >> example_toScaling [
 { #category : #'toogle button' }
 ToExperiments class >> example_toggle_sliding [
 
-	|  toggle track but left right slideB slide |
-
+	| toggle track but left right slideB slide |
 	toggle := ToElement new
 		          vFitContent;
-					background: Color lightBlue;
-					"padding: (BlInsets all: 2);"
-					border: (BlBorder paint: Color blue);
-					geometry: (BlRoundedRectangleGeometry cornerRadius: 14);
+		          background: Color lightBlue;
+		          "padding: (BlInsets all: 2);"border:
+			          (BlBorder paint: Color blue);
+		          geometry: (BlRoundedRectangleGeometry cornerRadius: 14);
 		          layout: BlLinearLayout horizontal.
 	track := ToElement new
 		         fitContent;
 		         layout: BlLinearLayout horizontal.
-	left := BlElement new size: 17 @ 14; background: Color gray; margin: (BlInsets left: 5 right: 5).
+	left := BlElement new
+		        extent: 17 @ 14;
+		        background: Color gray;
+		        margin: (BlInsets left: 5 right: 5).
 	but := BlElement new
-		       size: 14 @ 14;
-				geometry: (BlCircleGeometry new);
+		       extent: 14 @ 14;
+		       geometry: BlCircleGeometry new;
 		       background: Color green.
-	right := BlElement new size: 17 @ 14; background: Color gray; margin: (BlInsets left: 5 right: 5).
-	track addChildren: { left. but. right }.
+	right := BlElement new
+		         extent: 17 @ 14;
+		         background: Color gray;
+		         margin: (BlInsets left: 5 right: 5).
+	track addChildren: {
+			left.
+			but.
+			right }.
 
-	toggle width: toggle padding left + toggle padding right + but requestedWidth + ((left requestedWidth + left margin left + left margin right) max: (right requestedWidth + right margin left + right margin right)).
+	toggle width:
+		toggle padding left + toggle padding right + but requestedWidth
+		+ (left requestedWidth + left margin left + left margin right max:
+				 right requestedWidth + right margin left + right margin right).
 	toggle addChild: track.
 
 	slide := 0.
-	slideB :=  [ ((left requestedWidth max: right requestedWidth) - toggle padding left - toggle padding right) + left margin right + left margin left "+ right margin left + right margin right"].
+	slideB := [
+		          (left requestedWidth max: right requestedWidth)
+		          - toggle padding left - toggle padding right
+		          + left margin right + left margin left "+ right margin left + right margin right" ].
 	slide := slideB value.
-	track transformDo: [ :aTransform | aTransform translateBy: slide negated @ 0 ].
-	
-	toggle when: BlClickEvent do: [
-		slide := slide isZero ifTrue: [slideB value] ifFalse: [0].
-		slide traceCr.
-		track transformDo: [ :aTransform | aTransform translateBy: slide negated @ 0 ] ].
+	track transformDo: [ :aTransform |
+		aTransform translateBy: slide negated @ 0 ].
+
+	toggle addEventHandlerOn: BlClickEvent do: [
+			slide := slide isZero
+				         ifTrue: [ slideB value ]
+				         ifFalse: [ 0 ].
+			slide traceCr.
+			track transformDo: [ :aTransform |
+				aTransform translateBy: slide negated @ 0 ] ].
 
 	toggle openInSpace
 ]
@@ -1255,10 +1430,10 @@ ToExperiments class >> example_toggle_sliding_with_animation1 [
 
 	| root toggle track but left right slide |
 	root := ToElement new
-		          fitContent;
-		          border: (BlBorder paint: Color black);
-					padding: (BlInsets all: 2);
-		          layout: BlFrameLayout new.
+		        fitContent;
+		        border: (BlBorder paint: Color black);
+		        padding: (BlInsets all: 2);
+		        layout: BlFrameLayout new.
 	toggle := ToElement new
 		          vFitContent;
 		          layout: BlLinearLayout horizontal.
@@ -1266,33 +1441,49 @@ ToExperiments class >> example_toggle_sliding_with_animation1 [
 		         fitContent;
 		         border: (BlBorder paint: Color black);
 		         layout: BlLinearLayout horizontal.
-	left := BlElement new size: 30 @ 14; background: Color veryLightGray; margin: (BlInsets left: 5 right: 5).
+	left := BlElement new
+		        extent: 30 @ 14;
+		        background: Color veryLightGray;
+		        margin: (BlInsets left: 5 right: 5).
 	but := BlElement new
-		       size: 14 @ 14;
-				 position: left requestedWidth @ 0;
+		       extent: 14 @ 14;
+		       position: left requestedWidth @ 0;
 		       background: Color green;
 		       border: (BlBorder paint: Color black).
-	right := BlElement new size: 20 @ 14; background: Color pink.
-	track addChildren: { left. but. right }.
+	right := BlElement new
+		         extent: 20 @ 14;
+		         background: Color pink.
+	track addChildren: {
+			left.
+			but.
+			right }.
 
-	toggle width: but requestedWidth + ((left requestedWidth + left margin left + left margin right) max: (right requestedWidth + right margin left + right margin right)).
+	toggle width: but requestedWidth
+		+ (left requestedWidth + left margin left + left margin right max:
+				 right requestedWidth + right margin left + right margin right).
 	toggle addChild: track.
 
 	"slide := ((left requestedWidth max: right requestedWidth) - toggle padding left - toggle padding right) ."
 	"track transformDo: [ :aTransform | aTransform translateBy: slide  @ 0 ]."
 	slide := 0.
-	slide := ((left requestedWidth max: right requestedWidth) - toggle padding left - toggle padding right).
-	track transformDo: [ :aTransform | aTransform translateBy: slide negated @ 0 ].
-		slide := slide isZero ifTrue: [((left requestedWidth max: right requestedWidth) - toggle padding left - toggle padding right) ] ifFalse: [0].
-		slide := ((left requestedWidth "+ left margin left + left margin right") - toggle padding left - toggle padding right).
-	
-	toggle when: BlClickEvent do: [
-		slide traceCr.
-		track addAnimation: (BlTransformAnimation new
-					  duration: 200 milliSeconds;
-					  transformDo: [ :b | b translateBy: slide  @ 0 ]).
-		slide := slide * -1.
-		].
+	slide := (left requestedWidth max: right requestedWidth)
+	         - toggle padding left - toggle padding right.
+	track transformDo: [ :aTransform |
+		aTransform translateBy: slide negated @ 0 ].
+	slide := slide isZero
+		         ifTrue: [
+				         (left requestedWidth max: right requestedWidth)
+				         - toggle padding left - toggle padding right ]
+		         ifFalse: [ 0 ].
+	slide := left requestedWidth - toggle padding left
+	         - toggle padding right. "+ left margin left + left margin right"
+
+	toggle addEventHandlerOn: BlClickEvent do: [
+			slide traceCr.
+			track addAnimation: (BlTransformAnimation new
+					 duration: 200 milliSeconds;
+					 transformDo: [ :b | b translateBy: slide @ 0 ]).
+			slide := slide * -1 ].
 	root addChild: toggle.
 	root openInSpace
 ]
@@ -1313,7 +1504,7 @@ ToExperiments class >> example_toggle_with_animation [
 	btn := ToElement new
 		       geometry: BlEllipseGeometry new;
 		       background: Color veryLightGray;
-		       size: 16 @ 16;
+		       extent: 16 @ 16;
 		       position: 3 @ 3.
 	track addChild: btn.
 	track addChild: lab.
@@ -1327,8 +1518,8 @@ ToExperiments class >> example_toggle_with_animation [
 					  from: Color veryLightGray;
 					  to: Color black;
 					  onStepDo: [ :aColor :anElement |
-						  anElement background: aColor.
-						  anElement parent border: (BlBorder paint: aColor) ]) })
+							  anElement background: aColor.
+							  anElement parent border: (BlBorder paint: aColor) ]) })
 ]
 
 { #category : #frame }
@@ -1342,8 +1533,8 @@ ToExperiments class >> example_twoChildrenInPolygon [
 			 width: 15
 			 offset: 0 asPoint).
 	parent constraintsDo: [ :c |
-		c horizontal fitContent.
-		c vertical fitContent ].
+			c horizontal fitContent.
+			c vertical fitContent ].
 	parent clipChildren: true.
 
 	parent border: (BlBorder paint: Color black width: 2).
@@ -1352,7 +1543,7 @@ ToExperiments class >> example_twoChildrenInPolygon [
 	parent padding: (BlInsets all: 15).
 	parent margin: (BlInsets all: 10).
 
-	child := BlElement new size: 50 @ 30.
+	child := BlElement new extent: 50 @ 30.
 	child layout: BlFrameLayout new.
 	child background: (Color red alpha: 0.3).
 	child margin: (BlInsets all: 3).
@@ -1361,9 +1552,9 @@ ToExperiments class >> example_twoChildrenInPolygon [
 	child outskirts: BlOutskirts inside.
 	child addChild: (BlElement new
 			 background: Color yellow;
-			 size: 40 @ 40).
+			 extent: 40 @ 40).
 
-	child2 := BlElement new size: 250 @ 100.
+	child2 := BlElement new extent: 250 @ 100.
 	child2 layout: BlFrameLayout new.
 	child2 background: (Color blue alpha: 0.3).
 	child2 margin: (BlInsets all: 3).
@@ -1372,7 +1563,7 @@ ToExperiments class >> example_twoChildrenInPolygon [
 	child2 outskirts: BlOutskirts inside.
 	child2 addChild: (BlElement new
 			 background: Color yellow;
-			 size: 40 @ 40).
+			 extent: 40 @ 40).
 
 	parent addChild: child.
 	parent addChild: child2.
@@ -1385,9 +1576,9 @@ ToExperiments class >> example_twoChildrenInPolygon [
 	child addEventHandler: (BlEventHandler
 			 on: BlClickEvent
 			 do: [
-				 child2 hasParent
-					 ifTrue: [ child2 removeFromParent ]
-					 ifFalse: [ parent addChild: child2 ] ]).
+					 child2 hasParent
+						 ifTrue: [ child2 removeFromParent ]
+						 ifFalse: [ parent addChild: child2 ] ]).
 
 	top := ToElement new fitContent.
 	top clipChildren: true.
@@ -1429,8 +1620,7 @@ ToExperiments class >> example_twoChildrenMatchParentInFitContent [
 			c vertical matchParent ].
 	parent addChild: child.
 	parent addChild: child2.
-	parent forceLayout.
-	^ parent openInOBlSpace 
+	^ parent openInSpace 
 ]
 
 { #category : #rotation }
@@ -1441,4 +1631,101 @@ ToExperiments class >> example_verticalLabel [
 			 t rotateBy: 270 ])
 		border: (BlBorder paint: Color gray);
 		openInSpace
+]
+
+{ #category : #label }
+ToExperiments class >> labelWithForegroundWithGradient [ 
+
+	<script>
+	| l |
+	l := ToAttributedLabel new.
+	l background: ((BlLinearGradientPaint direction: 0 @ 1)
+				from: Color red
+				to: Color blue).
+	l text: 'AZERTYUIOP'.
+	l openInSpace 
+]
+
+{ #category : #album }
+ToExperiments class >> methodText [
+	^ self  class sourceCodeAt: #example_TextPane
+]
+
+{ #category : #tree }
+ToExperiments class >> newTreeElement [
+
+	| tree |
+	tree := ToListElement new.
+	tree withRowNumbers.
+
+	tree nodeBuilder: [ :node :anExWrapper :holder |
+			| align triplet arrowIcon arrowButton iconContainer hasChildren |
+			align := anExWrapper level * 25.
+			triplet := ToTripletElement new.
+			triplet horizontal: true.
+			triplet middleElement:
+				(ToLabel new text: anExWrapper wrapped asString).
+			arrowIcon := ToImage new.
+			hasChildren := anExWrapper hasChildren.
+			hasChildren ifTrue: [
+					| arrowTk |
+					arrowTk := anExWrapper isExpanded
+						           ifTrue: [ #'iconic-arrow-down' ]
+						           ifFalse: [ #'iconic-arrow-right' ].
+					arrowIcon innerImage: (tree valueOfTokenNamed: arrowTk) ].
+			arrowIcon
+				extent: 18 asPoint;
+				id: #arrow.
+			iconContainer := ToElement new
+				                 fitContent;
+				                 yourself.
+			iconContainer layout: BlLinearLayout horizontal.
+			iconContainer addChild: (ToElement new extent: align @ 0).
+			arrowButton := ToButton new
+				               icon: arrowIcon;
+				               yourself.
+			arrowButton addAllStamps: #( #iconic #borderless ).
+			iconContainer addChild: arrowButton.
+			triplet startInterspace: 10.
+			triplet startElement: iconContainer.
+			hasChildren ifTrue: [
+					arrowButton clickAction: [
+							| newArrowTk |
+							anExWrapper toggle.
+							newArrowTk := anExWrapper isExpanded
+								              ifTrue: [ #'iconic-arrow-down' ]
+								              ifFalse: [ #'iconic-arrow-right' ].
+							arrowIcon innerImage: (tree valueOfTokenNamed: newArrowTk) ] ].
+			triplet hMatchParent.
+			node addChild: triplet ].
+
+	^ tree
+]
+
+{ #category : #tree }
+ToExperiments class >> newTreePane [
+
+	| tree inspectBtn showStatisticsBtn disabox menuPane pane |
+	tree := self newTreeElement.
+	tree id: #treeElement.
+	inspectBtn := ToMenuItem new labelText: 'Inspect'.
+	showStatisticsBtn := ToMenuItem new labelText: 'Statistics'.
+	disabox := ToCheckMenuItem new label: (ToLabel text: 'Disable').
+
+	menuPane := ToMenuPane new.
+	menuPane hMatchParent.
+	menuPane addItem: inspectBtn.
+	menuPane addItem: showStatisticsBtn.
+	menuPane addItem: disabox.
+
+	inspectBtn clickAction: [ tree space root inspect ].
+	disabox clickAction: [ tree disabled: disabox isChecked ].
+	showStatisticsBtn clickAction: [ 
+		tree space showStatisticsWindow ].
+
+	pane := ToPane vertical matchParent.
+	pane addChild: menuPane.
+	pane addChild: tree.
+
+	^ pane
 ]

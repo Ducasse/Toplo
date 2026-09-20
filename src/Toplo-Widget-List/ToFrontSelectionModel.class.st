@@ -13,7 +13,7 @@ ToFrontSelectionModel >> disableIndex: anIndex [
 { #category : #accessing }
 ToFrontSelectionModel >> disabledSelectionModel [
 
-	^ self subSelectionModelIndex at: #disabled ifAbsent: [  ]
+	^ self subSelectionModelWithId: ToListDisabledSelectionChangedEvent
 ]
 
 { #category : #accessing }
@@ -35,18 +35,10 @@ ToFrontSelectionModel >> enableIndex: anIndex [
 	self disabledSelectionModelDo: [ :sm | sm deselectIndex: anIndex ]
 ]
 
-{ #category : #testing }
-ToFrontSelectionModel >> hasUnselectableInInterval: anInterval [
-
-	self unselectableSelectionModelDo: [ :sm |
-		^ anInterval anySatisfy: [ :idx | sm containsIndex: idx ] ].
-	^ super hasUnselectableInInterval: anInterval
-]
-
 { #category : #accessing }
 ToFrontSelectionModel >> hiddenSelectionModel [
 
-	^ self subSelectionModelIndex at: #hidden ifAbsent: [  ]
+	^ self subSelectionModelWithId: ToListHiddenSelectionChangedEvent 
 ]
 
 { #category : #accessing }
@@ -93,52 +85,39 @@ ToFrontSelectionModel >> isUnselectableIndex: anIndex [
 { #category : #accessing }
 ToFrontSelectionModel >> nextSelectableIndexStartingAt: anIndex [
 
-	(self unselectableSelectionModel isNil or: [
-		 self hiddenSelectionModel isNil ]) ifTrue: [
-		^ super nextSelectableIndexStartingAt: anIndex ].
-	
-	(self unselectableSelectionModel isEmpty and: [
-		 self hiddenSelectionModel isEmpty ]) ifTrue: [
-		^ super nextSelectableIndexStartingAt: anIndex ].
-
 	anIndex to: self itemCount do: [ :idx |
-		((self unselectableSelectionModel containsIndex: idx) or: [
-			 self hiddenSelectionModel containsIndex: idx ]) ifFalse: [ ^ idx ] ].
+	(self isUnselectableIndex: idx) ifFalse: [ ^ idx ] ].
 	^ 0
 ]
 
 { #category : #accessing }
 ToFrontSelectionModel >> previousSelectableIndexStartingAt: anIndex [
 
-	(self unselectableSelectionModel isNil or: [
-		 self hiddenSelectionModel isNil ]) ifTrue: [
-		^ super previousSelectableIndexStartingAt: anIndex ].
-
-	(self unselectableSelectionModel isEmpty and: [
-		 self hiddenSelectionModel isEmpty ]) ifTrue: [
-		^ super previousSelectableIndexStartingAt: anIndex ].
-
 	anIndex to: 1 by: -1 do: [ :idx |
-		((self unselectableSelectionModel containsIndex: idx) or: [
-			 self hiddenSelectionModel containsIndex: idx ]) ifFalse: [ ^ idx ] ].
+	(self isUnselectableIndex: idx) ifFalse: [ ^ idx ] ].
 	^ 0
-]
-
-{ #category : #updating }
-ToFrontSelectionModel >> selectIndex: anIndex [
-
-	self unselectableSelectionModelDo: [ :sm | (sm containsIndex: anIndex) ifTrue: [ ^ self ] ].
-	super selectIndex: anIndex
 ]
 
 { #category : #updating }
 ToFrontSelectionModel >> selectIndex: aFirstIndex to: aSecondIndex [
 
-	self flag: 'To be optimized'.
+	| from to |
 	super selectIndex: aFirstIndex to: aSecondIndex.
+
+	from := (aFirstIndex min: aSecondIndex) max: 1.
+	to := aFirstIndex max: aSecondIndex.
+
 	self unselectableSelectionModelDo: [ :sm |
-		aFirstIndex to: aSecondIndex do: [ :idx |
-		(sm containsIndex: idx) ifTrue: [ self deselectIndex: idx ] ] ]
+			from to: to do: [ :idx |
+				(self isUnselectableIndex: idx) ifTrue: [ self deselectIndex: idx ] ] ]
+]
+
+{ #category : #updating }
+ToFrontSelectionModel >> selectOneMoreIndex: anIndex [
+
+	self unselectableSelectionModelDo: [ :sm |
+		(sm containsIndex: anIndex) ifTrue: [ ^ self ] ].
+	super selectOneMoreIndex: anIndex
 ]
 
 { #category : #updating }
@@ -180,7 +159,7 @@ ToFrontSelectionModel >> unselectableIndex: anIndex [
 { #category : #accessing }
 ToFrontSelectionModel >> unselectableSelectionModel [
 
-	^ self subSelectionModelIndex at: #unselectable ifAbsent: [  ]
+	^ self subSelectionModelWithId: ToListUnselectableSelectionChangedEvent 
 ]
 
 { #category : #accessing }

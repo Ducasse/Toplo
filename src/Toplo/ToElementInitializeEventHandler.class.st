@@ -1,6 +1,9 @@
 Class {
 	#name : #ToElementInitializeEventHandler,
 	#superclass : #BlCustomEventHandler,
+	#instVars : [
+		'addedToSceneGraph'
+	],
 	#category : #'Toplo-Core'
 }
 
@@ -16,12 +19,34 @@ ToElementInitializeEventHandler >> elementAddedToParentEvent: anEvent [
 ToElementInitializeEventHandler >> elementAddedToSceneGraphEvent: anEvent [
 
 	| target |
+	addedToSceneGraph ifTrue: [ ^ self ].
+	addedToSceneGraph := true.
 	target := anEvent currentTarget.
-	target ensuredSkinManager requestInstallSkinIn: target
+	target applyConfiguration.
+	target ensuredSkinManager requestNewSkinIn: target.
+	target spaceDo: [ :sp | sp checkToploPhases ].
+	target dispatchEvent: ToAddedToSpaceEvent new
+]
+
+{ #category : #'event handling' }
+ToElementInitializeEventHandler >> elementRemovedFromSceneGraphEvent: anEvent [
+
+	addedToSceneGraph := false.
+	anEvent currentTarget dispatchEvent: ToRemovedFromSpaceEvent new
 ]
 
 { #category : #'api - accessing' }
 ToElementInitializeEventHandler >> eventsToHandle [
 
-	^ { BlElementAddedToSceneGraphEvent. BlElementAddedToParentEvent }
+	^ {
+		  BlElementAddedToSceneGraphEvent.
+		  BlElementRemovedFromSceneGraphEvent.
+		  BlElementAddedToParentEvent }
+]
+
+{ #category : #'api - hooks' }
+ToElementInitializeEventHandler >> onInstalledIn: anElement [
+
+	super onInstalledIn: anElement.
+	addedToSceneGraph := false
 ]

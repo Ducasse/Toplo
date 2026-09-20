@@ -1,7 +1,7 @@
 Extension { #name : #BlElement }
 
 { #category : #'*Toplo-IDE' }
-BlElement >> inspectionSkin [
+BlElement >> inspectionSkin: aBuilder [
 
 	<inspectorPresentationOrder: 30 title: 'Skin'>
 	self skinManager ifNil: [
@@ -14,14 +14,14 @@ BlElement >> inspectionSkin [
 ]
 
 { #category : #'*Toplo-IDE' }
-BlElement >> inspectionStamps [
+BlElement >> inspectionStamps: aBuilder [
 
 	<inspectorPresentationOrder: 30 title: 'Stamps'>
 	| table |
 	table := SpTablePresenter new
-		  items: (self toStyleStore
+		  items: (self stampMap
 				   ifNil: [ #(  ) ]
-				   ifNotNil: [ :tst | tst stampIndex allProperties ]);
+				   ifNotNil: [ :map | map stampMap allProperties ]);
 		  sortingBlock: [ :a :b | a key < b key ];
 		  addColumn:
 			  (SpStringTableColumn
@@ -47,14 +47,14 @@ BlElement >> inspectionStamps [
 ]
 
 { #category : #'*Toplo-IDE' }
-BlElement >> inspectionTokens [
+BlElement >> inspectionTokens: aBuilder [
 
 	<inspectorPresentationOrder: 31 title: 'Tokens'>
 	| table |
 	table := SpTablePresenter new
-		  items: (self toStyleStore
+		  items: (self tokenPropertyMap
 				   ifNil: [ #(  ) ]
-				   ifNotNil: [ :tst | tst tokenPropertyIndex allProperties ]);
+				   ifNotNil: [ :idx | idx allProperties ]);
 		  sortingBlock: [ :a :b | a key < b key ];
 		  addColumn:
 			  (SpStringTableColumn
@@ -80,7 +80,7 @@ table contextMenu: (SpMenuPresenter new
 ]
 
 { #category : #'*Toplo-IDE' }
-BlElement >> styleSheetRulesCount [
+BlElement >> styleSheetRulesCount: aBuilder [
 
 	self skinManagerDo: [ :skinManager |
 		skinManager installedSkinDo: [ :skin |

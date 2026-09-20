@@ -25,10 +25,11 @@ ToSkinnablePropertyTest >> testRead [
 { #category : #tests }
 ToSkinnablePropertyTest >> testWriteTo [
 
-	| w prop writer reader |
+	| w prop writer reader newSkinRequestedAfter |
 	w := ToElement new.
-	BlSpace new root addChild: w.
-	self assert: w skinManager skinInstaller notNil.
+	space deferAndSettle: [
+		space root addChild: w ].
+	self deny: w skinManager newSkinRequested.
 	prop := ToSkinnableProperty new.
 	writer := [ :e :v | e background: v ].
 	reader := [ :e | e background ].
@@ -38,8 +39,11 @@ ToSkinnablePropertyTest >> testWriteTo [
 	self assert: prop writer equals: writer.
 	self assert: prop reader equals: reader.
 	self assert: prop name equals: #background.
-	prop write: Color blue to: w.
-	self deny: w skinManager skinInstaller isNil.
+
+	space deferAndSettle: [
+		prop write: Color blue to: w.
+		newSkinRequestedAfter := w skinManager newSkinRequested ].
+	self assert: newSkinRequestedAfter.
 
 	self assert: (w background isKindOf: BlPaintBackground).
 	self assert: w background paint color equals: Color blue.
@@ -49,9 +53,11 @@ ToSkinnablePropertyTest >> testWriteTo [
 { #category : #tests }
 ToSkinnablePropertyTest >> testWriteToWithDelegation [
 
-	| w prop writer reader |
+	| w prop writer reader newSkinRequestedAfter |
 	w := ToLabeledIcon new.
-	w label: (ToLabel text: '').
+	space deferAndSettle: [
+		space root addChild: w.
+		w label: (ToLabel text: '') ].
 	self assert: w label text asString equals: '' asRopedText asString.
 	prop := ToSkinnableProperty new.
 	writer := [ :e :v | e label text: v ].
@@ -59,17 +65,20 @@ ToSkinnablePropertyTest >> testWriteToWithDelegation [
 	prop writer: writer.
 	prop reader: reader.
 	prop name: #'label-text'.
-	w ensuredSkinManager requestInstallSkinIn: w.
-	w skinManager applySkinReinstallIn: w.
-	self assert: w skinManager skinInstaller isNil.
-	prop write: 'Hello' asRopedText to: w.
-	self assert: (w label text equals: 'Hello' asRopedText).
+	space deferAndSettle: [
+		w ensuredSkinManager requestNewSkinIn: w ].
+	self deny: w skinManager newSkinRequested.
+
+	space deferAndSettle: [
+		prop write: 'Hello' asRopedText to: w.
+		newSkinRequestedAfter := w skinManager newSkinRequested ].
+	self
+		assert: w label text asString
+		equals: 'Hello'.
 	self
 		assert: (prop read: w) asString
-		equals: 'Hello' asRopedText asString.
-	self assert: w skinManager skinInstaller isNil.
-	BlSpace new root addChild: w.
-	self deny: w skinManager skinInstaller isNil
+		equals: 'Hello'.
+	self assert: newSkinRequestedAfter
 ]
 
 { #category : #tests }
@@ -83,12 +92,12 @@ ToSkinnablePropertyTest >> testWrongDefinition [
 	prop writer: writer.
 	prop reader: reader.
 	prop name: #unknownFeature.
-	self assert: w skinManager skinInstaller isNil.
+	self deny: w skinManager newSkinRequested.
 	self should: [ w perform: #unknownFeature ] raise: Error.
 	self
 		should: [ w perform: #unknownFeature: with: Color red ]
 		raise: Error.
 	self should: [ prop read: w ] raise: Error.
 	self should: [ prop write: Color blue to: w ] raise: Error.
-	self assert: w skinManager skinInstaller isNil
+	self deny: w skinManager newSkinRequested
 ]

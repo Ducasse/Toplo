@@ -1,14 +1,14 @@
 Class {
 	#name : #ToMultiSelectElementSkin,
 	#superclass : #ToSelectElementSkin,
-	#category : #'Toplo-Widget-Select-Core'
+	#category : #'Toplo-Widget-Select-Multi'
 }
 
 { #category : #'accessing - shortcuts' }
 ToMultiSelectElementSkin >> shortcutsToInstallIn: aSelect [
 
 	| listElement |
-	listElement := aSelect listElement.
+	listElement := aSelect popupListElement.
 
 	^ Array streamContents: [ :stream |
 		  stream nextPutAll: (super shortcutsToInstallIn: aSelect).

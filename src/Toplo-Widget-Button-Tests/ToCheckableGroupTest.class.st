@@ -87,7 +87,7 @@ ToCheckableGroupTest >> testIndeterminateRaiseError [
 
 	| group btn |
 	btn := ToCheckbox new.
-	btn withIndeterminate: true.
+	btn allowIndeterminate: true.
 	group := ToCheckableGroup new.
 	self should: [ group register: btn ] raise: Error
 ]
@@ -135,28 +135,51 @@ ToCheckableGroupTest >> testUnregister [
 
 	| group buttons |
 	group := ToCheckableGroup new.
-	buttons := (1 to: 4) collect: [ :idx | ToCheckbox new check ].
+	buttons := (1 to: 4) collect: [ :idx | ToCheckbox new labelText: idx asString; check ].
 	group registerAll: buttons.
 	self assert: group checkedList size equals: 1.
-	self assert: group registeredCheckables first checked.
+	self assert: group registeredCheckables last checked.
+	group unregister: buttons second.
+	self assert: group registeredCheckables size equals: 3
+
+]
+
+{ #category : #tests }
+ToCheckableGroupTest >> testUnregisterWithStrictStrategy [
+
+	| group buttons |
+	group := ToCheckableGroup new.
+	buttons := (1 to: 4) collect: [ :idx | ToCheckbox new labelText: idx asString; check ].
+	group registerAll: buttons.
+	self assert: group checkedList size equals: 1.
+	self assert: group registeredCheckables last checked.
 	group unregister: buttons second.
 	self assert: group registeredCheckables size equals: 3.
 	group unregister: buttons first.
 	self assert: group registeredCheckables size equals: 2.
-	self assert: group checkedList isEmpty
+	self assert: group checkedList size equals: 1.
+	self assert: buttons last isChecked.
+	group unregister: buttons last.
+	self assert: group checkedList size equals: 0.
+	group unregister: buttons third.
+	self assert: group registeredCheckables size equals: 0.
+
+
+
 ]
 
 { #category : #tests }
-ToCheckableGroupTest >> testUpdateError [
+ToCheckableGroupTest >> testUnregisterWithWeakOrNoneStrategy [
 
 	| group buttons |
 	group := ToCheckableGroup new.
-	buttons := (1 to: 4) collect: [ :idx | ToCheckbox new ].
+	buttons := (1 to: 4) collect: [ :idx | ToCheckbox new labelText: idx asString; check ].
 	group registerAll: buttons.
-	self
-		should: [ group registeredCheckables at: 1 put: ToCheckbox new ]
-		raise: Error
-		description: 'Updating a button is not allowed'
+	buttons do: [ :b | group unregister: b ].
+	self assert: group checkedList size equals: 0.
+	self assert: group registeredCheckables size equals: 0.
+
+
 ]
 
 { #category : #tests }
@@ -278,8 +301,8 @@ ToCheckableGroupTest >> testWithTwoPreChecked4 [
 	buttons := (1 to: 4) collect: [ :idx | ToCheckbox new check ].
 	group registerAll: buttons.
 	self assert: group checkedList size equals: 1.
-	self assert: group registeredCheckables first checked.
+	self assert: group registeredCheckables first checked not.
 	self assert: group registeredCheckables second checked not.
 	self assert: group registeredCheckables third checked not.
-	self assert: group registeredCheckables fourth checked not
+	self assert: group registeredCheckables fourth checked
 ]

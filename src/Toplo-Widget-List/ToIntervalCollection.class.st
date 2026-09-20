@@ -15,7 +15,14 @@ ToIntervalCollection >> = anObject [
 	^ intervals = anObject intervals
 ]
 
-{ #category : #private }
+{ #category : #accessing }
+ToIntervalCollection >> addAllIntervals: anIntervalArray [
+	" adapted from https://coderbyte.com/algorithm/insert-interval-into-list-of-sorted-disjoint-intervals "
+
+	anIntervalArray do: [ :i | self addInterval: i ]
+]
+
+{ #category : #accessing }
 ToIntervalCollection >> addInterval: anInterval [
 	" adapted from https://coderbyte.com/algorithm/insert-interval-into-list-of-sorted-disjoint-intervals "
 
@@ -60,6 +67,18 @@ ToIntervalCollection >> checkIntervals [
 			prev last < (curr last - 1) ifFalse: [
 				Error signal:
 					' last should be < than next interval - 1 at: ' , idx asString ] ] ]
+]
+
+{ #category : #testing }
+ToIntervalCollection >> containsAnyOfInterval: anInterval [
+
+	intervals do: [ :int |
+			int last < anInterval first ifFalse: [
+					| first last |
+					first := anInterval first max: int first.
+					last := anInterval last min: int last.
+					(int includesAnyOf: (first to: last)) ifTrue: [ ^ true ] ] ].
+	^ false
 ]
 
 { #category : #testing }
@@ -191,7 +210,7 @@ ToIntervalCollection >> merge [
 ToIntervalCollection >> mergeStartingAt: aPosition [
 
 	| first last interval1 interval2 |
-	" try to merge with previous interval "
+	" try to merge with next interval "
 	aPosition < intervals size ifFalse: [ ^ self ].
 	interval1 := intervals at: aPosition.
 	interval2 := intervals at: aPosition + 1.
@@ -222,6 +241,14 @@ ToIntervalCollection >> postCopy [
 	intervals := intervals copy
 ]
 
+{ #category : #dependencies }
+ToIntervalCollection >> release [ 
+
+	super release.
+	intervals removeAll.
+	intervals := nil
+]
+
 { #category : #'api - selection' }
 ToIntervalCollection >> removeAll [
 
@@ -249,13 +276,14 @@ ToIntervalCollection >> removeInterval: anInterval [
 				a < first ifTrue: [ newIntervals add: (a to: (first - 1)) ].
 				b > last ifTrue: [ newIntervals add: ((last + 1) to: b) ] ] ].
 	intervals := newIntervals.
+	self merge.
 	self checkIntervals.
 
 ]
 
 { #category : #private }
 ToIntervalCollection >> removeIntervalFromIndex: aFromIndex toIndex: aToIndex [
-
+	"'ToIntervalCollection>>removeIntervalFromIndex: ' trace. aFromIndex trace. ' toIndex: ' trace. aToIndex traceCr."
 	self removeInterval: (aFromIndex to: aToIndex)
 ]
 
@@ -266,9 +294,9 @@ ToIntervalCollection >> select: fromIndex to: toIndex [
 ]
 
 { #category : #'api - selection' }
-ToIntervalCollection >> selectIndex: aNumber [
+ToIntervalCollection >> selectIndex: anIndex [
 
-	self addInterval: (aNumber to: aNumber)
+	self selectOneMoreIndex: anIndex
 ]
 
 { #category : #'api - selection' }
@@ -281,4 +309,10 @@ ToIntervalCollection >> selectIndex: fromIndex to: toIndex [
 ToIntervalCollection >> selectIndexes: anArray [
 
 	anArray do: [ :idx | self addInterval: (idx to: idx) ]
+]
+
+{ #category : #'api - selection' }
+ToIntervalCollection >> selectOneMoreIndex: aNumber [
+
+	self addInterval: (aNumber to: aNumber)
 ]

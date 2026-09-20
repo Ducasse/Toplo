@@ -26,14 +26,11 @@ ToListBasicAdditionalSelectionElementEventHandler >> handleEvent: anEvent [
 { #category : #'element handlers' }
 ToListBasicAdditionalSelectionElementEventHandler >> listAdditionalSelectionChangedEvent: anEvent [
 
-	| touchedIntervals target |
-	touchedIntervals := anEvent touchedIntervals.
+	|  target |
 	target := anEvent currentTarget.
 
-	self refreshSelectionFromEvent: anEvent.
-
-	touchedIntervals do: [ :int |
-		target dataSource notifyItemsChanged: int ]
+	self updateSelectionFromEvent: anEvent.
+	self updateNodesIn: target
 ]
 
 { #category : #accessing }

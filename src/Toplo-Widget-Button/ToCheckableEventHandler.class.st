@@ -9,19 +9,40 @@ ToCheckableEventHandler >> checkableChangedEvent: anEvent [
 
 	| target |
 	target := anEvent currentTarget.
-	target group ifNotNil: [ :grp | grp checkableChangedEvent: anEvent ]
+	target group ifNotNil: [ :grp | grp notifyChanged ]
 ]
 
 { #category : #'event handling' }
 ToCheckableEventHandler >> clickEvent: anEvent [
 
-	| target |
-	target := anEvent currentTarget.
-	target switchToNextCheckState 
+	anEvent
+		ifPrimary: [ self primaryClickEvent: anEvent ]
+		secondary: [  ]
+		middle: [  ]
+		other: [  ]
+
+]
+
+{ #category : #'event handling' }
+ToCheckableEventHandler >> doubleClickEvent: anEvent [
+
+	self clickEvent: anEvent
 ]
 
 { #category : #'api - accessing' }
 ToCheckableEventHandler >> eventsToHandle [
 
-	^ { ToCheckableChangedEvent. BlClickEvent  }
+	^ {
+		  ToCheckableChangedEvent.
+		  BlClickEvent.
+		  BlDoubleClickEvent }
+]
+
+{ #category : #'event handling' }
+ToCheckableEventHandler >> primaryClickEvent: anEvent [
+
+	| currentTarget |
+	currentTarget := anEvent currentTarget.
+	currentTarget switchToNextCheckStateOnClick ifFalse: [ ^ self ].
+	currentTarget switchToNextCheckStateOnEvent: anEvent
 ]

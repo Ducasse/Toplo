@@ -17,38 +17,18 @@ ToCompositeSelecter >> initialize [
 { #category : #accessing }
 ToCompositeSelecter >> recordSubSelecter: aSelecter [
 
-	aSelecter ifNil: [ ^ self ].
 	subSelecterIndex 
-		at: aSelecter uniqueId
+		at: aSelecter selectionChangedEventClass
 		ifPresent: [
-		Error signal: 'A selecter with the same id already exists' ].
+		Error signal: 'A selecter for the same selection already exists' ].
 	subSelecterIndex
-		at: aSelecter uniqueId
+		at: aSelecter selectionChangedEventClass
 		put: aSelecter.
 	self selectionModel recordSubSelectionModel: aSelecter selectionModel
 ]
 
 { #category : #operations }
 ToCompositeSelecter >> shiftSelection: anInteger from: anIndex [
-
-	(anInteger < 0 and: [ self itemCount >= anIndex ]) ifTrue: [
-		| count |
-		count := anInteger abs.
-		self deselectIndex: anIndex to: anIndex + count - 1 ].
-	" must send to super ** here ** to deselect the right index if needed "
-	super shiftSelection: anInteger from: anIndex.
-	subSelecterIndex valuesDo: [ :s |
-		s shiftSelection: anInteger from: anIndex ]
-]
-
-{ #category : #operations }
-ToCompositeSelecter >> shiftSelectionCommandItemCount: anInteger from: anIndex [
-
-	(anInteger < 0 and: [ self itemCount >= anIndex ]) ifTrue: [
-		| count |
-		count := anInteger abs.
-		" must send here ** before ** super send to deselect the right index if needed "
-		self deselectIndex: anIndex to: anIndex + count - 1 ].
 
 	super shiftSelection: anInteger from: anIndex.
 	subSelecterIndex valuesDo: [ :s |
@@ -62,7 +42,7 @@ ToCompositeSelecter >> subSelecterIndex [
 ]
 
 { #category : #accessing }
-ToCompositeSelecter >> subSelecterWithId: anUniqueId [
+ToCompositeSelecter >> subSelecterWithEventClass: anUniqueId [
 
 	^ subSelecterIndex  at: anUniqueId ifAbsent: [  ]
 ]
@@ -71,6 +51,28 @@ ToCompositeSelecter >> subSelecterWithId: anUniqueId [
 ToCompositeSelecter >> unrecordSubSelecter: aSelecter [
 
 	aSelecter ifNil: [ ^ self ].
-	subSelecterIndex removeKey:	aSelecter uniqueId.
+	subSelecterIndex removeKey:	aSelecter selectionChangedEventClass.
 	self selectionModel unrecordSubSelectionModel: aSelecter selectionModel
+]
+
+{ #category : #operations }
+ToCompositeSelecter >> updateSelectionAfter: aValuable withDataAccessor: aDataAccessor [
+
+	| selectionIndex |
+	" a dictionary to store the selected item collection (value) of each selecter (key)"
+	selectionIndex := IdentityDictionary new.
+
+	" save selected data items for each sub-selecter "
+	subSelecterIndex valuesDo: [ :subselecter |
+			| selection |
+			selection := subselecter selectedIndexesCollect: [ :idx |
+				             aDataAccessor at: idx ].
+			selectionIndex at: subselecter put: selection ].
+
+	super updateSelectionAfter: aValuable withDataAccessor: aDataAccessor.
+
+	" select back the selected items"
+	selectionIndex keysAndValuesDo: [ :subselecter :selection |
+			subselecter selectOnlyIndexes:
+				(selection collect: [ :dataItem | aDataAccessor indexOf: dataItem ]) ]
 ]

@@ -9,12 +9,25 @@ ToRawDarkTheme class >> defaultTokenProperties [
 
 	^ super defaultTokenProperties , {
 		  (ToTokenProperty
+			   name: #'sh-style-table'
+			   value: self darkStyleTable).
+		  (ToTokenProperty
 			   name: #'background-color'
 			   value: (Color fromHexString: '#313339')).
 		  (ToTokenProperty
 			   name: #'color-bg-container'
 			   value: (Color fromHexString: '#313339')).
 		  (ToTokenProperty name: #'color-bg-tooltip' value: Color black).
+		  (ToTokenProperty
+			   name: #'color-primary-unchecked'
+			   value: (Color fromHexString: '#313339')).
+
+		  (ToTokenProperty
+			   name: #'color-primary-selection-focused'
+			   value: (self defaultColorPrimary alpha: 0.8)).
+		  (ToTokenProperty
+			   name: #'color-primary-selection-unfocused'
+			   value: (self defaultColorPrimary alpha: 0.2)).
 
 		  (ToTokenProperty
 			   name: #'color-bg-container-disabled'

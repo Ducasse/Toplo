@@ -7,20 +7,27 @@ Class {
 	#category : #'Toplo-Widget-List-Selection-Mode'
 }
 
-{ #category : #'instance creation' }
-ToListSubSelectionMode class >> parentMode: aSelectionMode [
+{ #category : #accessing }
+ToListSubSelectionMode class >> parentMode: aParentMode [
 
 	^ self basicNew
-		  parentMode: aSelectionMode;
-		  initialize
+		  parentMode: aParentMode;
+		  initialize;
+		  yourself
+]
+
+{ #category : #initialization }
+ToListSubSelectionMode >> defaultSelectionOption [
+
+	^ ToListSelectionOption new
+		  withEmbeddedRepresentation;
+		  yourself
 ]
 
 { #category : #'instance creation' }
 ToListSubSelectionMode >> newSelecter [
 
 	^ ToSubSelecter new
-		  uniqueId: self uniqueId;
-		  selectionChangedEventClass: self selectionChangedEventClass;
 		  parentSelecter: parentMode selecter;
 		  yourself
 ]
@@ -35,10 +42,4 @@ ToListSubSelectionMode >> newSelectionModelIn: aListElement [
 ToListSubSelectionMode >> parentMode: aSelectionMode [
 
 	parentMode := aSelectionMode
-]
-
-{ #category : #accessing }
-ToListSubSelectionMode >> uniqueId [ 
-
-	^ self subclassResponsibility 
 ]

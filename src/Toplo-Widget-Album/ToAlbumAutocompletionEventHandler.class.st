@@ -122,10 +122,6 @@ ToAlbumAutocompletionEventHandler >> newListElement [
 	"newListElement withDecoration: ToAutocompleteListSideBackgroundDecoration."
 	newListElement nodeBuilder: self defaultNodeBuilder.
 	newListElement fontSize: self defaultFontSize.
-	newListElement innerContainer maxHeight: self defaultMaxHeight.
-	newListElement innerContainer minHeight: self defaultMinHeight.
-	newListElement innerContainer vFitContent.
-	newListElement vFitContent.
 	newListElement hMatchParent.
 	^ newListElement
 ]
@@ -147,23 +143,18 @@ ToAlbumAutocompletionEventHandler >> onInstalledIn: anElement [
 			m beginsWith: thePattern caseSensitive: true ] ].
 
 	windowManager := ToPopupWindowManager new.
-	windowManager onInstalledIn: anElement.
-	windowManager builder: [ :anchWin :element |
+	anElement addEventHandler: windowManager.
+	windowManager windowBuilder: [ :anchWin :element |
 		anchWin root hMatchParent.
 		anchWin root vFitContent.
-		anchWin root addChild: self listElement ].
-
-	windowManager sizeHook: [ :theWindow :theElement :event |
-		theWindow width: 200 ].
-	windowManager positionHook: [ :theWindow :theElement :event |
-		theWindow position: self windowPosition ]
+		anchWin root addChild: self listElement ]
 ]
 
 { #category : #'event handling' }
 ToAlbumAutocompletionEventHandler >> openWindowFromEvent: anEvent [
 
 	windowManager currentWindow ifNil: [
-		windowManager popupWindowEvent: anEvent ]
+		windowManager popupEvent: anEvent ]
 ]
 
 { #category : #'event handling' }

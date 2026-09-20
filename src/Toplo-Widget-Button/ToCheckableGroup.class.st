@@ -11,27 +11,6 @@ Class {
 	#category : #'Toplo-Widget-Button-Checkable'
 }
 
-{ #category : #'registering / unregistering' }
-ToCheckableGroup >> add: aCheckable [
-	self
-		deprecated: 'send #register: instead'
-		transformWith:
-		'`@receiver add: `@arg' -> '`@receiver register: `@arg'.
-
-	self register: aCheckable
-]
-
-{ #category : #'registering / unregistering' }
-ToCheckableGroup >> addAll: aCollection [
-
-	self
-		deprecated: 'send #registerAll: instead'
-		transformWith:
-		'`@receiver addAll: `@arg' -> '`@receiver registerAll: `@arg'.
-
-	self registerAll: aCollection
-]
-
 { #category : #'checking / unchecking request' }
 ToCheckableGroup >> allowChangeWith: aCheckValue forCheckable: target [
 
@@ -41,44 +20,10 @@ ToCheckableGroup >> allowChangeWith: aCheckValue forCheckable: target [
 			 forCheckable: target)
 ]
 
-{ #category : #testing }
-ToCheckableGroup >> allowUnchecking [
-
-	^ checkingStrategy allowUnchecking
-]
-
-{ #category : #accessing }
-ToCheckableGroup >> buttons [
-	
-	self deprecated: 'send #registeredCheckables instead'
-		transformWith: '`@receiver buttons'
-						-> '`@receiver registeredCheckables'.
-
-	^ self registeredCheckables
-]
-
-{ #category : #'checking / unchecking request' }
-ToCheckableGroup >> checkableChangedEvent: aCheckedEvent [
-
-	self notifyChanged
-
-]
-
-{ #category : #accessing }
-ToCheckableGroup >> checkedButtons [
-
-	self
-		deprecated: 'send #checkedList instead'
-		transformWith:
-		'`@receiver checkedButtons' -> '`@receiver checkedList'.
-
-	^ self checkedList 
-]
-
 { #category : #accessing }
 ToCheckableGroup >> checkedList [
 
-	^ registeredCheckables select: [ :b | b checked ]
+	^ registeredCheckables select: [ :b | b isChecked ]
 ]
 
 { #category : #accessing }
@@ -119,9 +64,7 @@ ToCheckableGroup >> initialize [
 	super initialize.
 	eventDispatcher := BlDirectEventDispatcher on: self.
 	checkingStrategy := self defaultCheckStrategy.
-	registeredCheckables := ToObservableCollection new.
-	registeredCheckables addEventHandler: (ToCheckableGroupCollectionEventHandler new checkableGroup: self; yourself).
-
+	registeredCheckables := OrderedCollection new.
 	self notifyChanged
 ]
 
@@ -137,40 +80,20 @@ ToCheckableGroup >> notifyChanged [
 { #category : #'registering / unregistering' }
 ToCheckableGroup >> register: aCheckable [
 
-	registeredCheckables add: aCheckable
+	registeredCheckables add: aCheckable.
+	self checkingStrategy register: aCheckable in: self
 ]
 
 { #category : #'registering / unregistering' }
 ToCheckableGroup >> registerAll: aCollection [
 
-	registeredCheckables addAll: aCollection
+	aCollection do: [ :e | self register: e ]
 ]
 
 { #category : #accessing }
 ToCheckableGroup >> registeredCheckables [
 
 	^ registeredCheckables
-]
-
-{ #category : #'registering / unregistering' }
-ToCheckableGroup >> remove: aCheckable [
-
-	self
-		deprecated: 'send #unregister: instead'
-		transformWith:
-		'`@receiver remove: `@arg' -> '`@receiver unregister: `@arg'.
-	self unregister: aCheckable 
-]
-
-{ #category : #'registering / unregistering' }
-ToCheckableGroup >> removeAll [
-
-	self
-		deprecated: 'send #unregisterAll instead'
-		transformWith: '`@receiver removeAll' -> '`@receiver unregisterAll'.
-
-
-	self unregisterAll
 ]
 
 { #category : #'checking / unchecking request' }
@@ -183,36 +106,35 @@ ToCheckableGroup >> uncheckAll [
 ToCheckableGroup >> uncheckAllExcept: aButton [
 
 	(self registeredCheckables select: [ :b |
-		 b ~= aButton and: [ b checked ] ]) do: [ :b |
+		 b ~= aButton and: [ b isChecked ] ]) do: [ :b |
 		b privateChecked: false ]
-]
-
-{ #category : #accessing }
-ToCheckableGroup >> uncheckedButtons [
-
-	self
-		deprecated: 'send #uncheckedList instead'
-		transformWith:
-		'`@receiver uncheckedButtons' -> '`@receiver uncheckedList'.
-	^ self uncheckedList
 ]
 
 { #category : #accessing }
 ToCheckableGroup >> uncheckedList [
 
-	^ registeredCheckables reject: [ :b | b checked ]
+	^ registeredCheckables reject: [ :b | b isChecked ]
 ]
 
 { #category : #'registering / unregistering' }
 ToCheckableGroup >> unregister: aCheckable [
 
+	aCheckable group = self ifFalse: [ Error signal: 'A checkable can be unregistered from its own group only' ].
+	self checkingStrategy unregister: aCheckable from: self.
 	registeredCheckables remove: aCheckable
 ]
 
 { #category : #'registering / unregistering' }
 ToCheckableGroup >> unregisterAll [
 
+	registeredCheckables do: [:e | self checkingStrategy unregister: e from: self].
 	registeredCheckables removeAll
+]
+
+{ #category : #'checking protocol' }
+ToCheckableGroup >> withNoneCheckingStrategy [
+
+	self checkingStrategy: ToCheckableGroupNoneStrategy new
 ]
 
 { #category : #'checking protocol' }
@@ -225,10 +147,4 @@ ToCheckableGroup >> withStrictCheckingStrategy [
 ToCheckableGroup >> withWeakCheckingStrategy [
 
 	self checkingStrategy: ToCheckableGroupWeakStrategy new
-]
-
-{ #category : #'checking protocol' }
-ToCheckableGroup >> withoutCheckingStrategy [
-
-	self checkingStrategy: ToCheckableGroupNoneStrategy new
 ]

@@ -1,3 +1,7 @@
+"
+ToMaterialDesignIconProvider listElementWithAllIcons openInSpace.
+
+"
 Class {
 	#name : #ToMaterialDesignIconProvider,
 	#superclass : #ToImportedIconProvider,

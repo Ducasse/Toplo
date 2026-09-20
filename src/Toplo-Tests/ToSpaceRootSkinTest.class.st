@@ -11,19 +11,15 @@ Class {
 ToSpaceRootSkinTest >> testInstallSkinEvent [
 	" test that a ToSpaceRootSkin is installed as soon a the space skin related phases are installed "
 
-	| e goneHere |
-	space := BlSpace new.
+	| e isTransparent paintColor tokenVal |
 	e := ToElement new.
-	e defaultSkin: ToSpaceRootSkin new.
-	space root addChild: e.
-	self assert: e background isTransparent.
-	goneHere := false.
-	space addEventHandler: (BlEventHandler
-			 on: ToSpaceSkinPhasesStarted
-			 do: [
-				 goneHere := true.
-				 e skinManager applySkinReinstallIn: e.
-				 self deny: e background isTransparent ]).
-	space startSkinPhases.
-	self assert: goneHere
+	e defaultSkin: ToBackgroundColorSkinForTest new.
+	space deferAndSettle: [
+		space root addChild: e.
+		self installNewSkinNowIn: e.
+		isTransparent := e background isTransparent.
+		paintColor := e background paint color.
+		tokenVal := e valueOfTokenNamed: #'background-color' ].
+	self deny: isTransparent.
+	self assert: paintColor equals: tokenVal
 ]

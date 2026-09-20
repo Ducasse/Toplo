@@ -1,36 +1,14 @@
 Class {
 	#name : #ToListContextMenuSelectionElementEventHandler,
 	#superclass : #ToListSelectionElementEventHandler,
-	#traits : 'TToListElementEventHandler',
-	#classTraits : 'TToListElementEventHandler classTrait',
 	#category : #'Toplo-Widget-List-Selection-Element'
 }
-
-{ #category : #'element handlers' }
-ToListContextMenuSelectionElementEventHandler >> boundsHasChangedDuringScrollingEvent: anEvent [
-
-]
-
-{ #category : #'element handlers' }
-ToListContextMenuSelectionElementEventHandler >> contextMenuClosedEvent: anEvent [
-
-	| target |
-	target := anEvent currentTarget.
-	target enableScrolledEvent.
-	target contextMenuSelecter deselectAll
-]
-
-{ #category : #'element handlers' }
-ToListContextMenuSelectionElementEventHandler >> elementScrolledEvent: anEvent [
-]
 
 { #category : #'api - accessing' }
 ToListContextMenuSelectionElementEventHandler >> eventsToHandle [
 
 	^ super eventsToHandle , {
-		  ToListPrimarySelectionChangedEvent.
 		  ToListElementContextMenuRequest.
-		  ToContextMenuClosedEvent.
 		  ToListContextMenuSelectionChangedEvent }
 ]
 
@@ -38,19 +16,16 @@ ToListContextMenuSelectionElementEventHandler >> eventsToHandle [
 ToListContextMenuSelectionElementEventHandler >> listContextMenuSelectionChangedEvent: anEvent [
 	" sent by the context menu selecter"
 
-	self refreshSelectionFromEvent: anEvent
+	self updateSelectionFromEvent: anEvent
 ]
 
 { #category : #'element handlers' }
-ToListContextMenuSelectionElementEventHandler >> listElementContextMenuRequest: anEvent [
+ToListContextMenuSelectionElementEventHandler >> windowRequest: anEvent [
 
 	| childNode target nodeContainer globalPosition selectionModel |
 	target := anEvent currentTarget.
-	nodeContainer := target innerContainer.
-	target disableScrolledEvent.
+	nodeContainer := target innerElement.
 	globalPosition := anEvent sourceEvent position.
-
-	target isWithContextMenuSelection ifFalse: [ ^ self ].
 
 	" find de node at the event position "
 	self
@@ -79,11 +54,38 @@ ToListContextMenuSelectionElementEventHandler >> listElementContextMenuRequest: 
 ]
 
 { #category : #'element handlers' }
-ToListContextMenuSelectionElementEventHandler >> listPrimarySelectionChangedEvent: anEvent [
-	" the context menu should be close "
+ToListContextMenuSelectionElementEventHandler >> withTargetNodeFromEvent: anEvent do: aValuable [
+	" crappy but useful to get the node from the position of the event.
+	I'm used for selecting node and for context menu opening in case list node have margin"
 
-	| target |
-	target := anEvent currentTarget.
-	target currentContextMenu ifNotNil: [ :win |
-		win isOpened ifTrue: [ win close ] ]
+	| globalPosition currTarget childNode |
+	globalPosition := anEvent position.
+	currTarget := anEvent currentTarget.
+	childNode := currTarget nodeContainers
+		             detect: [ :node |
+			             node holder isSelectable and: [
+				             node containsGlobalPoint: globalPosition ] ]
+		             ifNone: [
+			             currTarget innerElement nodeContainers
+				             detect: [ :node |
+					             | gap |
+					             gap := currTarget isHorizontal
+						                    ifTrue: [ node margin left ]
+						                    ifFalse: [ node margin top ].
+					             node holder isSelectable and: [
+						             node containsGlobalPoint:
+							             globalPosition - (0 @ gap) ] ]
+				             ifNone: [
+					             currTarget innerElement nodeContainers
+						             detect: [ :node |
+							             | gap |
+							             gap := currTarget isHorizontal
+								                    ifTrue: [ node margin right ]
+								                    ifFalse: [ node margin bottom ].
+							             node holder isSelectable and: [
+								             node containsGlobalPoint:
+									             globalPosition + (0 @ gap) ] ]
+						             ifNone: [  ] ] ].
+
+	childNode ifNotNil: [ aValuable value: childNode ]
 ]

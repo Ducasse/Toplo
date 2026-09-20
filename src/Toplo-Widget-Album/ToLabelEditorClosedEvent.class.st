@@ -1,11 +1,5 @@
 Class {
 	#name : #ToLabelEditorClosedEvent,
-	#superclass : #ToAnchoredWindowClosedEvent,
-	#category : #'Toplo-Widget-Album-Label'
+	#superclass : #ToElementEditorClosedEvent,
+	#category : #'Toplo-Widget-Album-LabelEditor'
 }
-
-{ #category : #sending }
-ToLabelEditorClosedEvent >> sendTo: anObject [
-
-	anObject labelEditorClosedEvent: self
-]

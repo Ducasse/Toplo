@@ -2,10 +2,22 @@ Class {
 	#name : #ToAlbumEventHandler,
 	#superclass : #BlCustomEventHandler,
 	#instVars : [
+		'target',
 		'textEmpty'
 	],
 	#category : #'Toplo-Widget-Album-TextPane'
 }
+
+{ #category : #'event handling' }
+ToAlbumEventHandler >> addedToSpaceEvent: anEvent [
+
+	self checkTextIn: target
+]
+
+{ #category : #'event handling' }
+ToAlbumEventHandler >> blurEvent: anEvent [
+
+]
 
 { #category : #'event handling' }
 ToAlbumEventHandler >> checkTextIn: anEditorElement [
@@ -23,41 +35,65 @@ ToAlbumEventHandler >> doubleClickEvent: anEvent [
 ]
 
 { #category : #'event handling' }
-ToAlbumEventHandler >> elementAddedToSceneGraphEvent: anEvent [
+ToAlbumEventHandler >> enablementChangedEvent: anEvent [
 
-	| target |
-	target := anEvent currentTarget.
-	self checkTextIn: target
+	target isEnabled
+		ifTrue: [ target beEditable ]
+		ifFalse: [
+			target beReadonlyWithSelection ]
 ]
 
 { #category : #'api - accessing' }
 ToAlbumEventHandler >> eventsToHandle [
 
 	^ {
+		  BlFocusEvent.
+		  BlBlurEvent.
 		  BlMouseDownEvent.
 		  BlMouseUpEvent.
 		  BlDoubleClickEvent.
-		  BlElementAddedToSceneGraphEvent.
+		  ToAddedToSpaceEvent.
 		  AlbTextEditedEvent.
 		  AlbTextReplacedEvent.
+		  ToEnablementChangedEvent.
 		  ToTextEmptinessChangeEvent }
+]
+
+{ #category : #'event handling' }
+ToAlbumEventHandler >> focusEvent: anEvent [
+
+
 ]
 
 { #category : #'mouse handlers' }
 ToAlbumEventHandler >> mouseDownEvent: anEvent [
 
-	" copy the event, else the double click can't works "
-	anEvent currentTarget infinite dispatchEvent: anEvent copy.
-	anEvent currentTarget infinite requestFocus.
+	" copy the event, else the double click can't works 
+	in textfield in case of clicking outside the infinite bounds" 
+	target infinite dispatchEvent: anEvent copy.
+	anEvent primaryButtonPressed ifFalse: [ ^ self ].
 	anEvent consume
 ]
 
 { #category : #'mouse handlers' }
 ToAlbumEventHandler >> mouseUpEvent: anEvent [
 
-	" copy the event, else the double click can't works "
-	anEvent currentTarget infinite dispatchEvent: anEvent copy.
-	anEvent consume
+	" copy the event, else the double click can't works 
+	in textfield in case of clicking outside the infinite bounds."
+	target infinite dispatchEvent: anEvent copy.
+	"**** Pay attention to not consume anEvent to allow double click **** "
+]
+
+{ #category : #accessing }
+ToAlbumEventHandler >> target [
+
+	^ target
+]
+
+{ #category : #accessing }
+ToAlbumEventHandler >> target: anAlbum [
+
+	target := anAlbum
 ]
 
 { #category : #'event handling' }

@@ -2,29 +2,53 @@ Class {
 	#name : #ToPrimarySelectionModel,
 	#superclass : #ToFrontSelectionModel,
 	#instVars : [
-		'subSelectionModelIndex'
+		'subSelectionModelIndex',
+		'makeDisabledUnselectable'
 	],
 	#category : #'Toplo-Widget-List-Selection-Model'
 }
 
 { #category : #copying }
-ToPrimarySelectionModel >> duplicate [ 
+ToPrimarySelectionModel >> copySelectionFrom: anotherSelectionModel [
 
-	| cpy origSubSelectionModelIndex |
-	cpy := self copy.
-	origSubSelectionModelIndex := subSelectionModelIndex.
-	cpy subSelectionModelIndex: IdentityDictionary new.
-	subSelectionModelIndex keysAndValuesDo: [ :key :value |
-		cpy subSelectionModelIndex at: key put: value copy ].
-	^ cpy
-	
+	subSelectionModelIndex copySelectionFrom: anotherSelectionModel subSelectionModelIndex.
+	super copySelectionFrom: anotherSelectionModel.
+
+]
+
+{ #category : #updating }
+ToPrimarySelectionModel >> deselectAll [
+
+	super deselectAll.
 ]
 
 { #category : #initialization }
 ToPrimarySelectionModel >> initialize [
 
 	super initialize.
-	subSelectionModelIndex := IdentityDictionary new
+	subSelectionModelIndex := ToDictionaryBasedSubSelectionModelRegistry new.
+	makeDisabledUnselectable := false
+]
+
+{ #category : #testing }
+ToPrimarySelectionModel >> isUnselectableIndex: anIndex [
+
+	makeDisabledUnselectable ifTrue: [
+		self disabledSelectionModelDo: [ :sm |
+			(sm containsIndex: anIndex) ifTrue: [ ^ true ] ] ].
+	^ super isUnselectableIndex: anIndex
+]
+
+{ #category : #accessing }
+ToPrimarySelectionModel >> makeDisabledUnselectable [
+
+	^ makeDisabledUnselectable
+]
+
+{ #category : #accessing }
+ToPrimarySelectionModel >> makeDisabledUnselectable: aBoolean [
+
+	makeDisabledUnselectable := aBoolean
 ]
 
 { #category : #'instance creation' }
@@ -33,6 +57,19 @@ ToPrimarySelectionModel >> newSecondarySelectionModel [
 	^ ToSecondarySelectionModel new
 		  primarySelectionModel: self;
 		  yourself
+]
+
+{ #category : #copying }
+ToPrimarySelectionModel >> postCopy [ 
+
+	super postCopy.
+	subSelectionModelIndex := subSelectionModelIndex copy
+]
+
+{ #category : #updating }
+ToPrimarySelectionModel >> selectIndex: anArray [
+
+	super selectIndex: anArray
 ]
 
 { #category : #accessing }
@@ -45,4 +82,12 @@ ToPrimarySelectionModel >> subSelectionModelIndex [
 ToPrimarySelectionModel >> subSelectionModelIndex: anIdentityDictionary [
 
 	subSelectionModelIndex := anIdentityDictionary
+]
+
+{ #category : #enumerating }
+ToPrimarySelectionModel >> withAllSubModelsDo: aValuable [
+
+	aValuable value: self.
+	subSelectionModelIndex withAllSubModelsDo: aValuable
+	
 ]

@@ -1,29 +1,13 @@
 Class {
 	#name : #ToDeselectedSkinEvent,
-	#superclass : #ToIntrasicSkinEvent,
-	#instVars : [
-		'focused'
-	],
+	#superclass : #ToStandardSelectionSkinEvent,
 	#category : #'Toplo-Core-SkinEvents'
 }
 
 { #category : #accessing }
-ToDeselectedSkinEvent >> focused [
+ToDeselectedSkinEvent >> selected [ 
 
-	^ focused
-]
-
-{ #category : #accessing }
-ToDeselectedSkinEvent >> focused: aBoolean [
-
-	focused := aBoolean
-]
-
-{ #category : #'instance creation' }
-ToDeselectedSkinEvent >> fromState: aState [
-
-	super fromState: aState.
-	self focused: aState focused
+	^ false
 ]
 
 { #category : #sending }

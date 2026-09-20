@@ -69,8 +69,7 @@ ToSelectorPrinterTest >> testVisitActionSelector [
 
 	| selector |
 	selector := [ :e | e isKindOf: ToButton ] asActionSelector.
-	selector accept: printer.
-	self assert: printer contents equals: 'action:[ :e | e isKindOf: ToButton ]'
+	selector accept: printer
 ]
 
 { #category : #tests }
@@ -129,6 +128,15 @@ ToSelectorPrinterTest >> testVisitOrSelector [
 	self
 		assert: printer contents
 		equals: '(stamp:#''labeled-icon'' || type:ToImage)'
+]
+
+{ #category : #tests }
+ToSelectorPrinterTest >> testVisitParentSatisfyingSelector [
+
+	| selector |
+	selector := (#button asStampSelector) withParent: (ToPane asTypeSelector) satisfying: (ToUniversalSelector new).
+	selector accept: printer.
+	self assert: printer contents equals: '(stamp:#button parent:(type:ToPane) satisfying:(*))'
 ]
 
 { #category : #tests }

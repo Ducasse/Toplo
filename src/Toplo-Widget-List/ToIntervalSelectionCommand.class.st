@@ -1,24 +1,12 @@
 Class {
 	#name : #ToIntervalSelectionCommand,
-	#superclass : #ToSelectionModelAddRemoveCommand,
+	#superclass : #ToSelectionAddRemoveCommand,
 	#instVars : [
 		'from',
 		'to'
 	],
 	#category : #'Toplo-Widget-List-Command'
 }
-
-{ #category : #'private - hook' }
-ToIntervalSelectionCommand >> applyOn: anOperator [
-
-	" ask the operator passed as argument to actually apply the command. "
-
-	self
-		deprecated: 'Use applyOnOperator: instead'
-		transformWith: '`@receiver applyOn: `@argument'
-			-> '`@receiver applyOnOperator: `@argument'.
-	self applyWithOperator: anOperator
-]
 
 { #category : #'private - hook' }
 ToIntervalSelectionCommand >> applyWithOperator: anOperator [ 
@@ -56,12 +44,6 @@ ToIntervalSelectionCommand >> from: aFromIndex to: aToIndex [
 ToIntervalSelectionCommand >> indexes [ 
 
 	^ self computedInterval 
-]
-
-{ #category : #accessing }
-ToIntervalSelectionCommand >> intervals [ 
-
-	^ Array with: (from to: to)
 ]
 
 { #category : #accessing }

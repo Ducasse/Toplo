@@ -1,19 +1,23 @@
 Class {
 	#name : #ToWholeSelectionCommand,
-	#superclass : #ToSelectionModelAddRemoveCommand,
+	#superclass : #ToSelectionAddRemoveCommand,
 	#category : #'Toplo-Widget-List-Command'
 }
 
-{ #category : #'private - hook' }
-ToWholeSelectionCommand >> applyOn: anOperator [
+{ #category : #'instance creation' }
+ToWholeSelectionCommand class >> add [
 
-	" ask the operator passed as argument to actually apply the command. "
+	^ self new
+		  operation: ToAddSelectionOperation new;
+		  yourself
+]
 
-	self
-		deprecated: 'Use applyOnOperator: instead'
-		transformWith: '`@receiver applyOn: `@argument'
-			-> '`@receiver applyOnOperator: `@argument'.
-	self applyWithOperator: anOperator
+{ #category : #'instance creation' }
+ToWholeSelectionCommand class >> remove [
+
+	^ self new
+		  operation: ToRemoveSelectionOperation new;
+		  yourself
 ]
 
 { #category : #'private - hook' }
@@ -27,10 +31,4 @@ ToWholeSelectionCommand >> applyWithOperator: anOperator [
 ToWholeSelectionCommand >> indexes [ 
 
 	^ 1 to: selectionModel itemCount
-]
-
-{ #category : #accessing }
-ToWholeSelectionCommand >> intervals [ 
-
-	^ Array with: (1 to: selectionModel itemCount)
 ]

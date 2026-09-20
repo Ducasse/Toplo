@@ -2,134 +2,105 @@ Class {
 	#name : #ToSievedListElementEventHandler,
 	#superclass : #BlCustomEventHandler,
 	#instVars : [
-		'sieve',
-		'dataPositionIndex',
-		'sieveSelectionModel',
-		'queryApplicationTask'
+		'sieve'
 	],
 	#category : #'Toplo-Widget-List-Sieve'
 }
 
-{ #category : #'api - hooks' }
-ToSievedListElementEventHandler >> buildOriginalIndexMapFrom: aListElement [
-
-
-	dataPositionIndex removeAll.
-	aListElement dataAccessor withIndexDo: [ :aData :idx |
-		dataPositionIndex at: aData put: idx ]
-]
-
 { #category : #'api - accessing' }
 ToSievedListElementEventHandler >> eventsToHandle [
 
-	^ {
-		  ToObservableCollectionFilterResultEvent.
-		  BlInfiniteDataSourceChanged.
-		  BlInfiniteDataSourceItemRangeChanged.
-		  BlInfiniteDataSourceItemRangeInserted.
-		  BlInfiniteDataSourceItemRangeRemoved.
-		  ToListSelectionCommandAppliedEvent }
-]
-
-{ #category : #'data source events handling' }
-ToSievedListElementEventHandler >> infiniteDataSourceChanged: anEvent [
-
-	sieve pattern ifNotEmpty: [ ^ self ].
-	self buildOriginalIndexMapFrom: anEvent currentTarget
-]
-
-{ #category : #'data source events handling' }
-ToSievedListElementEventHandler >> infiniteDataSourceItemRangeChanged: anEvent [
-
-	sieve pattern ifNotEmpty: [ ^ self ].
-	self buildOriginalIndexMapFrom: anEvent currentTarget
-]
-
-{ #category : #'data source events handling' }
-ToSievedListElementEventHandler >> infiniteDataSourceItemRangeInserted: anEvent [
-
-	sieve pattern ifNotEmpty: [ ^ self ].
-	self buildOriginalIndexMapFrom: anEvent currentTarget
-]
-
-{ #category : #'data source events handling' }
-ToSievedListElementEventHandler >> infiniteDataSourceItemRangeRemoved: anEvent [
-
-	" no need to update dataPositionIndex here "
+	^ { "ToListSelectionCommandAppliedEvent."
+		  ToListPrimarySelectionChangedEvent.
+		  ToListDataSourceEmptinessChangedEvent }
 ]
 
 { #category : #'element handlers' }
-ToSievedListElementEventHandler >> listSelectionCommandAppliedEvent: aPreNotification [
+ToSievedListElementEventHandler >> listDataSourceEmptinessChangedEvent: anEvent [
+
+	| listElement |
+	listElement := anEvent currentTarget.
+	" have to do nothing if the list dataSource is not empty "
+	anEvent isEmpty ifFalse: [ ^ self ].
+	" empty the selection because nothing is in the listElement "
+	listElement selecter deselectAll.
+	listElement requestUpdateAllSelections
+]
+
+{ #category : #'element handlers' }
+ToSievedListElementEventHandler >> listPrimarySelectionChangedEvent: anEvent [
 	" the list selection change event is about to be dispatched.
 	I take care of the sieve internal selectionSet according to the list element selection model"
 
-	| listElement listSelModel touchedIndexes |
-	listElement := aPreNotification currentTarget.
+	| listElement listSelModel |
+	listElement := anEvent currentTarget.
 	listSelModel := listElement selectionModel.
-	" first check if the request is for the primary selection model "
-	listSelModel = aPreNotification selectionModel ifFalse: [ ^ self ].
 
+	" Have to proceed normally even the list datasource is empty to allow dependent element to be updated "
 	" reset the selection in case of single selection mode "
-	aPreNotification currentTarget isMultipleSelection ifFalse: [
-		sieveSelectionModel deselectAll ].
+	listElement isMultipleSelection
+		ifFalse: [ sieve selectionModel deselectAll ].
 
 	" the selection set is updated according to the pattern:
 	- if empty, the whole selection set is set from the whole list element selection model 
 	- if not empty, the selection set is computed according to the current list node list "
 	sieve pattern
-		ifEmpty: [
-			touchedIndexes := aPreNotification command indexes.
-			sieveSelectionModel copySelectionFrom: listSelModel ]
+		ifEmpty: [ sieve selectionModel copySelectionFrom: listSelModel ]
 		ifNotEmpty: [
-			touchedIndexes := OrderedCollection new.
-			aPreNotification command indexes do: [ :localIndex |
-				| originalIndex dataItem |
-				dataItem := listElement dataAccessor at: localIndex.
-				originalIndex := dataPositionIndex at: dataItem.
-				touchedIndexes add: originalIndex.
-				listSelModel
-					transferSelectionFromIndex: localIndex
-					toIndex: originalIndex
-					in: sieveSelectionModel ] ].
+				listElement dataSource withIndexDo: [ :d :localIndex |
+						sieve originalIndexMap at: d ifPresent: [ :originalIndex |
+								listSelModel
+									transferSelectionFromIndex: localIndex
+									toIndex: originalIndex
+									in: sieve selectionModel ] ] ].
 
 	" dispatch a specific, different from the primary selection change event that will be sent after.
 	It is useful for sieve list user that relies on the sieve internal selection to adapt themeself 
 	according to the sieve selection"
 	listElement dispatchEvent: (ToSieveSelectionChangedEvent new
 			 sieve: sieve;
-			 sourceCommand: aPreNotification command;
-			 touchedIndexes: touchedIndexes asArray;
-			 selectionModel: sieveSelectionModel;
+			 selectionModel: sieve selectionModel;
 			 yourself)
 ]
 
 { #category : #'element handlers' }
-ToSievedListElementEventHandler >> observableCollectionFilterResultEvent: anEvent [
+ToSievedListElementEventHandler >> listSelectionCommandAppliedEvent: aSelectionCommandAppliedEvent [
+	" the list selection change event is about to be dispatched.
+	I take care of the sieve internal selectionSet according to the list element selection model"
 
+	| listElement listSelModel |
 
-	| listElement |
-	listElement := anEvent currentTarget.
+	listElement := aSelectionCommandAppliedEvent currentTarget.
+	listSelModel := listElement selectionModel.
+	" first check if the request is for the primary selection model "
+	listSelModel == aSelectionCommandAppliedEvent selectionModel
+		ifFalse: [ ^ self ].
 
-	" a query has occured (because the query pattern has changed), update the list element accordingly "
-	sieve updateCurrentData.
+	" Have to proceed normally even the list datasource is empty to allow dependent element to be updated "
+	" reset the selection in case of single selection mode "
+	listElement isMultipleSelection
+		ifFalse: [ sieve selectionModel deselectAll ].
 
-	" ask the list to process the appropiate data source command and to update the selection model"
-	listElement sieveResultWith: sieve
-]
+	" the selection set is updated according to the pattern:
+	- if empty, the whole selection set is set from the whole list element selection model 
+	- if not empty, the selection set is computed according to the current list node list "
+	sieve pattern
+		ifEmpty: [ sieve selectionModel copySelectionFrom: listSelModel ]
+		ifNotEmpty: [
+				listElement dataSource withIndexDo: [ :d :localIndex |
+						sieve originalIndexMap at: d ifPresent: [ :originalIndex |
+								listSelModel
+									transferSelectionFromIndex: localIndex
+									toIndex: originalIndex
+									in: sieve selectionModel ] ] ].
 
-{ #category : #'api - hooks' }
-ToSievedListElementEventHandler >> onInstalledIn: aListElement [
-
-	super onInstalledIn: aListElement.
-	sieveSelectionModel := sieve selectionModel.
-	self originalIndexMap: sieve originalIndexMap.
-	self buildOriginalIndexMapFrom: aListElement
-]
-
-{ #category : #accessing }
-ToSievedListElementEventHandler >> originalIndexMap: aDictionary [
-
-	dataPositionIndex := aDictionary
+	" dispatch a specific, different from the primary selection change event that will be sent after.
+	It is useful for sieve list user that relies on the sieve internal selection to adapt themeself 
+	according to the sieve selection"
+	listElement dispatchEvent: (ToSieveSelectionChangedEvent new
+			 sieve: sieve;
+			 selectionModel: sieve selectionModel;
+			 yourself)
 ]
 
 { #category : #accessing }

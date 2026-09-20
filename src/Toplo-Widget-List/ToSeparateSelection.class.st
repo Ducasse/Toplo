@@ -1,6 +1,6 @@
 Class {
 	#name : #ToSeparateSelection,
-	#superclass : #ToSelectionGroup,
+	#superclass : #ToSelectionWithElement,
 	#instVars : [
 		'node'
 	],
@@ -8,17 +8,10 @@ Class {
 }
 
 { #category : #comparing }
-ToSeparateSelection >> = other [
+ToSeparateSelection >> equivalentTo: other [
 
-	^ super = other
-		  ifFalse: [ false ]
-		  ifTrue: [ node = other node ]
-]
-
-{ #category : #comparing }
-ToSeparateSelection >> hash [
-
-	^ super hash bitXor: node hash
+	(super equivalentTo: other) ifFalse: [ ^ false ].
+	^ (node equals: other node)
 ]
 
 { #category : #accessing }
@@ -34,7 +27,15 @@ ToSeparateSelection >> node: anObject [
 ]
 
 { #category : #accessing }
-ToSeparateSelection >> nodes [
+ToSeparateSelection >> nodeContainers [
 
-	^ Array with: node
+	^ node
+]
+
+{ #category : #'private - selection updating' }
+ToSeparateSelection >> stream: aStream withNewSelectionElementIn: aListElement option: aSelectionOption [
+
+	aStream nextPut: (aSelectionOption
+			 newSelectionElementIn: aListElement
+			 forNodeContainers: (Array with: node))
 ]

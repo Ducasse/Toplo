@@ -24,9 +24,9 @@ ToDemoButterflySkin1 >> installSkinEvent: anEvent [
 ]
 
 { #category : #'event handling' }
-ToDemoButterflySkin1 >> leavedSkinEvent: anEvent [
+ToDemoButterflySkin1 >> leftSkinEvent: anEvent [
 
-	super leavedSkinEvent: anEvent.
+	super leftSkinEvent: anEvent.
 	anEvent elementDo: [ :e |
 		e background: Color lightGray.
 		e border: (BlBorder paint: Color yellow width: 4) ]

@@ -44,7 +44,7 @@ ToScriptableSkin >> handleEvent: anEvent [
 
 	| handler |
 	handler := handlerMap at: anEvent class ifAbsent: [ ^ self ].
-	anEvent elementDo: [ :e | handler cull: e cull: anEvent ]
+	anEvent elementDo: [ :e | handler value: e value: anEvent ]
 ]
 
 { #category : #initialization }
@@ -134,15 +134,9 @@ ToScriptableSkin >> onInstallSkinEvent: aValuable [
 ]
 
 { #category : #'event handling' }
-ToScriptableSkin >> onLeavedSkinEvent: aValuable [
+ToScriptableSkin >> onLeftSkinEvent: aValuable [
 
-	handlerMap at: ToLeavedSkinEvent put: aValuable
-]
-
-{ #category : #'event handling' }
-ToScriptableSkin >> onOpenedSkinEvent: aValuable [
-
-	handlerMap at: ToOpenedSkinEvent put: aValuable
+	handlerMap at: ToLeftSkinEvent put: aValuable
 ]
 
 { #category : #'event handling' }
@@ -155,6 +149,12 @@ ToScriptableSkin >> onPressedSkinEvent: aValuable [
 ToScriptableSkin >> onReleasedSkinEvent: aValuable [
 
 	handlerMap at: ToReleasedSkinEvent put: aValuable
+]
+
+{ #category : #'event handling' }
+ToScriptableSkin >> onSelectableSkinEvent: aValuable [
+
+	handlerMap at: ToSelectableSkinEvent put: aValuable
 ]
 
 { #category : #'event handling' }
@@ -191,4 +191,10 @@ ToScriptableSkin >> onUnfocusedSkinEvent: aValuable [
 ToScriptableSkin >> onUninstallSkinEvent: aValuable [
 
 	handlerMap at: ToUnfocusedSkinEvent put: aValuable
+]
+
+{ #category : #'event handling' }
+ToScriptableSkin >> onUnselectableSkinEvent: aValuable [
+
+	handlerMap at: ToUnselectableSkinEvent put: aValuable
 ]

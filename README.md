@@ -1,7 +1,8 @@
 [![License](https://img.shields.io/github/license/pharo-graphics/Toplo.svg)](./LICENSE)
 [![Tests](https://github.com/pharo-graphics/Toplo/actions/workflows/Tests.yml/badge.svg)](https://github.com/pharo-graphics/Toplo/actions/workflows/Tests.yml)
 
-![toplo](https://github.com/pharo-graphics/Toplo/assets/49183340/57963fee-ed86-4ee0-99e1-7c39e9a9cdf9)
+<img width="1298" alt="Screenshot #1" src="https://github.com/user-attachments/assets/d442368b-88f6-42c4-816f-483f6ce246be" />
+<img width="1274" alt="Screenshot #2" src="https://github.com/user-attachments/assets/a3a1e4da-4a2c-42c8-a4f7-b705ec1ac941" />
 
 # Toplo
 
@@ -31,6 +32,7 @@ EpMonitor disableDuring: [
 
 
 ## Branches & Contributions
+
 We describe our contribution workflow & branch name convention in [this wiki page](../../wiki/Branches-and-versions).
 
 

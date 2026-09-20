@@ -1,46 +1,47 @@
 Class {
 	#name : #ToInfiniteDataSourceObserver,
 	#superclass : #BlInfiniteElementDataSourceObserver,
-	#category : #'Toplo-Widget-List-InnerInfinite'
+	#category : #'Toplo-Widget-List-InnerList-Infinite'
 }
 
 { #category : #'event handling' }
-ToInfiniteDataSourceObserver >> infiniteDataSourceChanged: anEvent [
+ToInfiniteDataSourceObserver >> infiniteDataSourceChanged: anEvent [ 
 
+	| listElement |
 	super infiniteDataSourceChanged: anEvent.
-	infiniteElement listElement dispatchEvent: anEvent copy
+	listElement := infiniteElement listElement.
+	"listElement requestUpdateAllSelections"
+
 ]
 
 { #category : #'event handling' }
-ToInfiniteDataSourceObserver >> infiniteDataSourceItemRangeChanged: anEvent [	
+ToInfiniteDataSourceObserver >> infiniteDataSourceItemRangeChanged: anEvent [
 
-	super infiniteDataSourceItemRangeChanged: anEvent	.
-	infiniteElement listElement dispatchEvent: anEvent copy
-]
-
-{ #category : #'event handling' }
-ToInfiniteDataSourceObserver >> infiniteDataSourceItemRangeEvent: anEvent [
-
-	super infiniteDataSourceItemRangeEvent: anEvent.
-	infiniteElement listElement dispatchEvent: anEvent copy
+	super infiniteDataSourceItemRangeChanged: anEvent
 ]
 
 { #category : #'event handling' }
 ToInfiniteDataSourceObserver >> infiniteDataSourceItemRangeInserted: anEvent [
 
-	super infiniteDataSourceItemRangeInserted: anEvent.
-	infiniteElement listElement dispatchEvent: anEvent copy
+	super infiniteDataSourceItemRangeInserted: anEvent
 ]
 
 { #category : #'event handling' }
-ToInfiniteDataSourceObserver >> infiniteDataSourceItemRangeRemoved: anEvent [ 
+ToInfiniteDataSourceObserver >> infiniteDataSourceItemRangeRemoved: anEvent [
+
+	| listElement |
 
 	super infiniteDataSourceItemRangeRemoved: anEvent.
-	infiniteElement listElement dispatchEvent: anEvent copy
+
+	" update the secondary selection because it can be on the removed nodes "
+	listElement := infiniteElement listElement.
+	listElement secondarySelecter
+		deselectIndex: anEvent position
+		to: anEvent position + anEvent itemCount - 1
 ]
 
 { #category : #'event handling' }
-ToInfiniteDataSourceObserver >> infiniteDataSourceItemsFiltered: anEvent [
+ToInfiniteDataSourceObserver >> infiniteDataSourceItemsFilteredEvent: anEvent [
 
 	self assertNotInLayoutOrScroll.
 	
@@ -48,12 +49,11 @@ ToInfiniteDataSourceObserver >> infiniteDataSourceItemsFiltered: anEvent [
 		onItemsFiltered: anEvent position
 		itemCount: anEvent itemCount.
 
-	self triggerUpdateProcessor.
-	infiniteElement listElement dispatchEvent: anEvent copy
+	self triggerUpdateProcessor
 ]
 
 { #category : #'event handling' }
-ToInfiniteDataSourceObserver >> infiniteDataSourceItemsSieved: anEvent [
+ToInfiniteDataSourceObserver >> listDataSourceItemsSievedEvent: anEvent [
 	self assertNotInLayoutOrScroll.
 	
 	infiniteElement dataSourceManager
@@ -61,18 +61,5 @@ ToInfiniteDataSourceObserver >> infiniteDataSourceItemsSieved: anEvent [
 		itemCount: anEvent itemCount
 		with: anEvent sieve.
 
-	self triggerUpdateProcessor.
-	infiniteElement listElement dispatchEvent: anEvent copy
-]
-
-{ #category : #'event handling' }
-ToInfiniteDataSourceObserver >> selecterCommandApplicationRequest: anEvent [
-
-	self assertNotInLayoutOrScroll.
-	
-	infiniteElement dataSourceManager
-		onSelecterCommand: anEvent command appliedBy: anEvent applier.
-
-	self triggerUpdateProcessor.
-	infiniteElement listElement dispatchEvent: anEvent copy
+	self triggerUpdateProcessor
 ]

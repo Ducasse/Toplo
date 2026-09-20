@@ -12,6 +12,33 @@ ToAlbumSkin >> blurBorderIn: anAlbum [
 		  width: (anAlbum valueOfTokenNamed: #'border-width')
 ]
 
+{ #category : #'event handling' }
+ToAlbumSkin >> disabledSkinEvent: anEvent [
+
+	super disabledSkinEvent: anEvent.
+	anEvent elementDo: [ :e |
+			e border: (self blurBorderIn: e).
+			e childWithId: #enablementFeedbackLayer ifNone: [
+					| layer |
+					layer := ToOverlayElement new.
+					layer id: #enablementFeedbackLayer.
+					layer preventMouseEvents.
+					layer background:
+						(e valueOfTokenNamed: #'text-editor-background-disabled').
+					layer attachToParent: e ] ]
+]
+
+{ #category : #'event handling' }
+ToAlbumSkin >> enabledSkinEvent: anEvent [
+
+	super enabledSkinEvent: anEvent.
+	anEvent elementDo: [ :e |
+			e border: (self blurBorderIn: e).
+			e childWithId: #enablementFeedbackLayer
+				ifFound: [ :layer |
+				layer removeFromParent ] ]
+]
+
 { #category : #accessing }
 ToAlbumSkin >> focusBorderIn: anAlbum [
 
@@ -32,7 +59,7 @@ ToAlbumSkin >> hoveredSkinEvent: anEvent [
 
 	super hoveredSkinEvent: anEvent.
 	anEvent elementDo: [ :e |
-		e isEditable
+		(e isEditable and: [ e isEnabled ])
 			ifTrue: [ e mouseCursor: Cursor overEditableText ]
 			ifFalse: [ e mouseCursor: Cursor normal ] ]
 ]
@@ -42,27 +69,36 @@ ToAlbumSkin >> installSkinEvent: anEvent [
 
 	super installSkinEvent: anEvent.
 	anEvent elementDo: [ :e |
-		(e hasStamp: #placeholder) ifTrue: [
-			e text
-				fontSize: 24;
-				foreground: Color gray lighter ].
-		e border: (self blurBorderIn: e).
-		e background: (e valueOfTokenNamed: #'color-bg-container').
-		e geometry: (BlRoundedRectangleGeometry cornerRadius:
-				 (e valueOfTokenNamed: 'border-radius')).
-		e margin: BlInsets empty.
-		e outskirts: BlOutskirts inside.
-		e padding: (BlInsets
-				 top: (e valueOfTokenNamed: #'padding-content-V')
-				 left: (e valueOfTokenNamed: #'padding-XS')
-				 bottom: (e valueOfTokenNamed: #'padding-content-V')
-				 right: (e valueOfTokenNamed: #'padding-XS')) ]
+			| pad |
+			(e hasStamp: #'code-editor')
+				ifTrue: [ e styleTable: (e valueOfTokenNamed: #'sh-style-table') ]
+				ifFalse: [
+						e text
+							defaultFontName: (e valueOfTokenNamed: #'font-name');
+							defaultFontSize: (e valueOfTokenNamed: #'font-size');
+							lineSpacing: (e valueOfTokenNamed: #'line-height');
+							foreground: (e valueOfTokenNamed: #'color-text') ].
+
+			e geometry: (BlRoundedRectangleGeometry cornerRadius:
+					 (e valueOfTokenNamed: #'border-radius')).
+			e margin: BlInsets empty.
+			e outskirts: BlOutskirts inside.
+			pad := BlInsets
+				       horizontal: (e valueOfTokenNamed: #'padding-content-HS')
+				       vertical: (e valueOfTokenNamed: #'padding-content-VS').
+			e haveVisibleScrollbar ifTrue: [
+					| gap |
+					gap := (e valueOfTokenNamed: #'scrollbar-breadth')
+					       +
+					       (2 * (e valueOfTokenNamed: #'scrollbar-padding-breadth')).
+					pad := pad withRight: gap ].
+			e padding: pad ]
 ]
 
 { #category : #'event handling' }
-ToAlbumSkin >> leavedSkinEvent: anEvent [
+ToAlbumSkin >> leftSkinEvent: anEvent [
 
-	super leavedSkinEvent: anEvent.
+	super leftSkinEvent: anEvent.
 	anEvent elementDo: [ :e | e mouseCursor: Cursor normal ]
 ]
 
@@ -71,4 +107,14 @@ ToAlbumSkin >> unfocusedSkinEvent: anEvent [
 
 	super unfocusedSkinEvent: anEvent.
 	anEvent elementDo: [ :e | e border: (self blurBorderIn: e) ]
+]
+
+{ #category : #'event handling' }
+ToAlbumSkin >> uninstallSkinEvent: anEvent [
+
+	super uninstallSkinEvent: anEvent.
+	anEvent elementDo: [ :e |
+			e childWithId: #enablementFeedbackLayer
+				ifFound: [ :layer |
+				layer removeFromParent ] ]
 ]

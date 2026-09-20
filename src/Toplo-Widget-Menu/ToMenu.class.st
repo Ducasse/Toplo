@@ -1,39 +1,82 @@
+"
+I'm a composite of Menu items. I can behave as a menu item (this is why I inherit from ToMenuItem) but I manage sub menu items.
+"
 Class {
 	#name : #ToMenu,
 	#superclass : #ToMenuItem,
-	#traits : 'TToMenuItemHolder + TToMenuWindowModel',
-	#classTraits : 'TToMenuItemHolder classTrait + TToMenuWindowModel classTrait',
+	#traits : 'TToItemListOwner + TToItemListUser + TToMenuItemListUser + TToMenuWindowModel',
+	#classTraits : 'TToItemListOwner classTrait + TToItemListUser classTrait + TToMenuItemListUser classTrait + TToMenuWindowModel classTrait',
 	#instVars : [
-		'items',
-		'isSubmenu',
-		'windowManager'
+		'isInline',
+		'builder',
+		'windowManager',
+		'showExpandIcon'
 	],
-	#category : #'Toplo-Widget-Menu-Basic'
+	#category : #'Toplo-Widget-Menu-Items'
 }
 
-{ #category : #'adding-removing' }
-ToMenu >> addedInMenu: aMenu [
+{ #category : #accessing }
+ToMenu >> anchorRoot: anElement [
 
-	super addedInMenu: aMenu.
-	isSubmenu := true.
-	self initializeWithMenuItemConstraints
-
+	self manager anchorRoot: anElement
 ]
 
-{ #category : #'t - clickable - click behavior' }
-ToMenu >> clickEventClass [
+{ #category : #accessing }
+ToMenu >> bar [
 
-	^ BlMouseDownEvent
-]
+	self
+		deprecated: 'Use #itemList instead'
+		transformWith: '`@rcvr bar' -> '`@rcvr itemList'.
 
-{ #category : #'menu window' }
-ToMenu >> closeWindow [
-
-	self items do: [ :it | it isOpened ifTrue: [ it closeWindow ] ].
-	self menuWindow ifNotNil: [:mw | mw close ]
+	^ self itemList
 ]
 
 { #category : #testing }
+ToMenu >> beInline [
+
+	self isInline: true
+]
+
+{ #category : #'window handling' }
+ToMenu >> bottomUpCloseWindowRequestOnEvent: anEvent [
+
+	self manager bottomUpCloseWindowRequestOnEvent: anEvent
+]
+
+{ #category : #accessing }
+ToMenu >> builder [ 
+
+	^ builder
+]
+
+{ #category : #accessing }
+ToMenu >> builder: aValuable [
+
+	" aValuable takes myself and the request event as arguments "
+
+	builder := aValuable
+]
+
+{ #category : #'t - menu window model' }
+ToMenu >> closeWindow [
+
+	self menuWindow ifNotNil: [:mw | mw close ].
+
+]
+
+{ #category : #accessing }
+ToMenu >> defaultWindowMeasurement [
+
+	^ ToMenuMeasurement new
+]
+
+{ #category : #accessing }
+ToMenu >> defaultWindowPlacement [
+
+	^ ToMenuPlacement new
+]
+
+{ #category : #accessing }
 ToMenu >> includes: anElement [
 
 	self menuWindow = anElement ifTrue: [ ^ true ].
@@ -46,61 +89,100 @@ ToMenu >> includes: anElement [
 ToMenu >> initialize [
 
 	super initialize.
-	isSubmenu := false.
-	self initializeWithMenuConstraints.
-	windowManager := ToMenuWindowManager new onInstalledIn: self.
-	windowManager builder: [ :menWin :request |
-		request currentTarget items do: [ :it | menWin root addChild: it ] ]
+	self initializeAsItemListOwner.
+	self initializeAsMenuItemListUser.
+
+	isInline := false.
+	self closeOnPicking: false.
+
+	windowManager := self newWindowManager 
+		                 windowBuilder: [ :window :request |
+			                 builder ifNotNil: [
+					                 self removeAllItems.
+					                 self builder cull: self cull: request ].
+			                 window root addChild: self itemList ];
+		                 yourself.
+	self addEventHandler: windowManager
 ]
 
-{ #category : #initialization }
-ToMenu >> initializeWithMenuConstraints [
+{ #category : #accessing }
+ToMenu >> isInline [
 
-	self fitContent.
-
+	^ isInline
 ]
 
-{ #category : #testing }
+{ #category : #accessing }
+ToMenu >> isInline: aBoolean [
+
+	isInline := aBoolean
+]
+
+{ #category : #accessing }
 ToMenu >> isMenu [
 
 	^ true
 ]
 
-{ #category : #'t - menu window model' }
-ToMenu >> isOpened [ 
+{ #category : #testing }
+ToMenu >> isMenuPaneMenu [
 
-	^ self menuWindow notNil
+	^ self menuPane notNil
 ]
 
-{ #category : #'t - menu window model' }
+{ #category : #testing }
+ToMenu >> isOpened [ 
+
+	^ self menuWindow notNil and: [ self menuWindow isOpened ]
+]
+
+{ #category : #testing }
+ToMenu >> isOutsideEvent: anEvent [
+
+	| windows |
+	windows := Array streamContents: [ :stream |
+			           self manager currentWindowDo: [ :w |
+				           w withAllSubwindowsDo: [ :sub | stream nextPut: sub ] ] ].
+	(windows allSatisfy: [ :w | w isOutsideEvent: anEvent ]) ifFalse: [
+		^ false ].
+	(self items allSatisfy: [ :it | it isOutsideEvent: anEvent ])
+		ifFalse: [ ^ false ].
+	^ super isOutsideEvent: anEvent
+]
+
+{ #category : #'t - menu item' }
 ToMenu >> isSubmenu [
 
-	^ isSubmenu 
+	^ self parentMenu notNil
 ]
 
 { #category : #'t - menu window model' }
 ToMenu >> isTopMenu [
 
-	^ self parentMenu isNil
+	^ self isSubmenu not or: [ self isMenuPaneMenu ]
 ]
 
-{ #category : #'t - menu item holder - accessing' }
-ToMenu >> items [
+{ #category : #'t - item list user - accessing' }
+ToMenu >> itemList [
 
-	^ items ifNil: [ items := OrderedCollection new ]
+	^ itemList
+]
+
+{ #category : #accessing }
+ToMenu >> manager [ 
+
+	^ windowManager 
 ]
 
 { #category : #'t - menu window model' }
-ToMenu >> menuWindow [ 
+ToMenu >> menuWindow [
 
-	^ windowManager currentWindow
+	^ self manager currentWindow
 ]
 
-{ #category : #'menu window' }
-ToMenu >> menuWindowDo: aValuable [
+{ #category : #'t - item list owner - initializing' }
+ToMenu >> newItemList [
 
-	self menuWindow ifNil: [ ^ self ].
-	aValuable value: self menuWindow
+	^ ToMenuItemListElement new
 ]
 
 { #category : #skin }
@@ -109,42 +191,58 @@ ToMenu >> newRawSkin [
 	^ ToMenuSkin new
 ]
 
+{ #category : #'instance creation' }
+ToMenu >> newWindowManager [
+
+ 	^ ToPopupMenuWindowManager new
+]
+
 { #category : #'t - menu window model' }
 ToMenu >> popupEvent: anEvent [
 
-	(windowManager newWindowEvent: anEvent) popupEvent: anEvent
+	self manager popupEvent: anEvent
 ]
 
-{ #category : #'adding-removing' }
-ToMenu >> removedFromMenu: aMenu [
+{ #category : #'t - menu item' }
+ToMenu >> showExpandIcon [
 
-	super removedFromMenu: aMenu.
-	isSubmenu := false.
-	self initializeWithMenuConstraints 
-
-	
+	^ showExpandIcon ifNil: [ showExpandIcon := false ]
 ]
 
-{ #category : #'t - menu window model' }
-ToMenu >> rootMenu [
+{ #category : #accessing }
+ToMenu >> showExpandIcon: aBoolean [
 
-	^ super rootMenu
+	showExpandIcon = aBoolean ifTrue: [ ^ self ].
+	showExpandIcon := aBoolean.
+	self requestNewSkin
 ]
 
-{ #category : #'theme event handling' }
-ToMenu >> toThemeInstalled [ 
+{ #category : #accessing }
+ToMenu >> windowClass [
 
-	windowManager toThemeInstalled.
-	super toThemeInstalled.
-
-	
+	^ self isInline
+		  ifTrue: [ ToMenuInlineWindowElement ]
+		  ifFalse: [ ToMenuWindow ]
 ]
 
-{ #category : #'theme event handling' }
-ToMenu >> toThemeUninstalled: aTheme [
+{ #category : #accessing }
+ToMenu >> windowManager [
 
-	windowManager toThemeUninstalled: aTheme.
-	super toThemeUninstalled: aTheme
+	self
+		deprecated: 'Use #manager instead'
+		transformWith: '`@rcvr windowManager' -> '`@rcvr manager'.
+	^ self manager
+]
 
-	
+{ #category : #accessing }
+ToMenu >> windowPlacement: anElementCustomPlacement [
+
+	self manager placement: anElementCustomPlacement
+]
+
+{ #category : #accessing }
+ToMenu >> windowStarter [
+
+	self isInline ifTrue: [ ^ ToInlineMenuStarter new ].
+	^ ToStandardPopupStarter new
 ]

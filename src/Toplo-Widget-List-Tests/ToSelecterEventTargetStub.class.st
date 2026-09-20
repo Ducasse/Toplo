@@ -1,8 +1,8 @@
 Class {
 	#name : #ToSelecterEventTargetStub,
 	#superclass : #BlElement,
-	#traits : 'TToAuthorisationRequestTarget',
-	#classTraits : 'TToAuthorisationRequestTarget classTrait',
+	#traits : 'TToRequestTarget',
+	#classTraits : 'TToRequestTarget classTrait',
 	#instVars : [
 		'selectionModel',
 		'scrollIndex'
@@ -10,10 +10,30 @@ Class {
 	#category : #'Toplo-Widget-List-Tests-Selection-Selecter'
 }
 
+{ #category : #'private - commands' }
+ToSelecterEventTargetStub >> addedDataSourceCommand: aCoomand [
+]
+
 { #category : #accessing }
 ToSelecterEventTargetStub >> itemCount [
 
 	^ 100
+]
+
+{ #category : #'data source updates' }
+ToSelecterEventTargetStub >> postponeAction: aValuable [ 
+
+	aValuable cull: nil
+]
+
+{ #category : #'data source updates' }
+ToSelecterEventTargetStub >> postponeCommand: aCommand [ 
+
+	aCommand applyIn: self
+]
+
+{ #category : #'event firing' }
+ToSelecterEventTargetStub >> requestUpdateAllSelections [
 ]
 
 { #category : #accessing }

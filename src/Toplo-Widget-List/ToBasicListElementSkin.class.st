@@ -17,16 +17,31 @@ ToBasicListElementSkin >> installSkinEvent: anEvent [
 
 	super installSkinEvent: anEvent.
 	anEvent elementDo: [ :e |
-		e shortcuts: (self shortcutsToInstallIn: e).
-		e installShortcuts.
-		e border: (e valueOfTokenNamed: #'color-border').
-		e background: (e valueOfTokenNamed: #'color-bg-container').
-		e padding: (BlInsets
-				 horizontal: (e valueOfTokenNamed: #'list-padding-H')
-				 vertical: (e valueOfTokenNamed: #'list-padding-V')).
-		e geometry: (BlRoundedRectangleGeometry cornerRadius:
-				 (e valueOfTokenNamed: 'border-radius')).
-		e margin: BlInsets empty]
+			| pad |
+			e requestUpdateAllSelections.
+			e shortcuts: (self shortcutsToInstallIn: e).
+			e installShortcuts.
+			pad := BlInsets
+				       horizontal: (e valueOfTokenNamed: #'list-padding-H')
+				       vertical: (e valueOfTokenNamed: #'list-padding-V').
+			e haveVisibleScrollbar ifTrue: [
+					| gap |
+					gap := (e valueOfTokenNamed: #'scrollbar-breadth')
+					       +
+					       (2 * (e valueOfTokenNamed: #'scrollbar-padding-breadth')).
+					pad := e isVertical
+						       ifTrue: [ pad withRight: gap ]
+						       ifFalse: [ pad withBottom: gap ] ].
+			e padding: pad.
+			e border: (e valueOfTokenNamed: #'color-border').
+			e
+				withStamp: #background
+				do: [ :v | e background: v ]
+				ifNone: [
+				e background: (e valueOfTokenNamed: #'color-bg-container') ].
+			e withStamp: #geometry do: [ :v | e geometry: v ] ifNone: [
+					e geometry: (BlRoundedRectangleGeometry cornerRadius:
+							 (e valueOfTokenNamed: 'border-radius')) ] ]
 ]
 
 { #category : #'accessing - shortcuts' }

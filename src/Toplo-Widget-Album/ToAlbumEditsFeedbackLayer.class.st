@@ -2,9 +2,9 @@ Class {
 	#name : #ToAlbumEditsFeedbackLayer,
 	#superclass : #ToOverlayElement,
 	#instVars : [
-		'feedback',
 		'backgroundAnimation',
-		'coverColor'
+		'flashCoverColor',
+		'editsFeedback'
 	],
 	#category : #'Toplo-Widget-Album-TextPane'
 }
@@ -13,29 +13,19 @@ Class {
 ToAlbumEditsFeedbackLayer >> attachTo: anEditorElement [
 
 	super attachTo: anEditorElement.
+	flashCoverColor := Color red alpha: 0.2.
 
-	coverColor := Color red alpha: 0.1.
-	anEditorElement addEventHandler: (BlEventHandler
-			 on: ToAlbumFlashRequestedEvent
-			 do: [ self flash ]).
-
+	anEditorElement whenFlashRequestedDo: [ self flash ].
 	" flash if save requested with no text change "
-	anEditorElement addEventHandler: (BlEventHandler
-			 on: ToAlbumSaveRequestedEvent
-			 do: [ :event | event unacceptedEdits ifFalse: [ self flash ] ]).
-
+	anEditorElement whenSaveRequestedDo: [ :event |
+		event unacceptedEdits ifFalse: [ self flash ] ].
 	" hide edit feedback when save is accepted or cancelled "
-	anEditorElement addEventHandler: (BlEventHandler
-			 on: ToAlbumSaveAcceptedEvent
-			 do: [ :event | self hideEditsFeedback ]).
-	anEditorElement addEventHandler: (BlEventHandler
-			 on: ToAlbumCancelRequestedEvent
-			 do: [ :event | self hideEditsFeedback ]).
-
+	anEditorElement whenSaveAcceptedDo: [ :event |
+		self hideEditsFeedback ].
+	anEditorElement whenCancelRequestedDo: [ :event |
+		self hideEditsFeedback ].
 	" show edit feedback when text is edited "
-	anEditorElement addEventHandler: (BlEventHandler
-			 on: AlbTextEditedEvent
-			 do: [ :event | self showEditsFeedback ])
+	anEditorElement whenTextEditedDo: [ :event | self showEditsFeedback ]
 ]
 
 { #category : #'api - attaching / detaching' }
@@ -55,18 +45,24 @@ ToAlbumEditsFeedbackLayer >> coverWithColor: aCoverColor [
 	self addAnimation: backgroundAnimation
 ]
 
+{ #category : #accessing }
+ToAlbumEditsFeedbackLayer >> editsFeedback [
+
+	^ editsFeedback 
+]
+
 { #category : #'api - attaching / detaching' }
 ToAlbumEditsFeedbackLayer >> flash [
 
-	self coverWithColor: coverColor
+	self coverWithColor: flashCoverColor
 ]
 
 { #category : #'edition-flag' }
 ToAlbumEditsFeedbackLayer >> hideEditsFeedback [
 
-	feedback ifNil: [ ^ self ].
-	self removeChild: feedback.
-	feedback := nil
+	editsFeedback ifNil: [ ^ self ].
+	self removeChild: editsFeedback.
+	editsFeedback := nil
 ]
 
 { #category : #initialization }
@@ -74,7 +70,6 @@ ToAlbumEditsFeedbackLayer >> initialize [
 
 	super initialize.
 	self layout: BlFrameLayout new.
-	self background: Color transparent.
 	self preventMeAndChildrenMouseEvents.
 
 ]
@@ -82,29 +77,13 @@ ToAlbumEditsFeedbackLayer >> initialize [
 { #category : #'edition-flag' }
 ToAlbumEditsFeedbackLayer >> newEditsFeedback [
 
-	| flag |
-	flag := BlElement new
-		        geometry: (BlRoundedRectangleGeometry cornerRadius: 8);
-		        background: ((BlLinearGradientPaint direction: 1 @ 1)
-				         start: 25 @ 0;
-				         stops: { 
-						         (0 -> Color orange).
-						         (0.35 -> (Color orange alpha: 0.4)).
-						         (0.45 -> (Color orange alpha: 0.1)).
-						         (0.50 -> (Color orange alpha: 0.0)).
-						         (1 -> Color transparent) });
-		        size: 25 @ 25.
-	flag constraintsDo: [ :c | 
-		c frame horizontal alignRight.
-		c frame vertical alignTop ].
-	flag preventMouseEvents.
-	^ flag
+	^ ToAlbumEditsFeedbackElement new
 ]
 
 { #category : #'edition-flag' }
 ToAlbumEditsFeedbackLayer >> showEditsFeedback [
 
-	feedback ifNotNil: [ ^ self ].
-	feedback := self newEditsFeedback.
-	self addChild: feedback 
+	editsFeedback ifNotNil: [ ^ self ].
+	editsFeedback := self newEditsFeedback.
+	self addChild: editsFeedback
 ]

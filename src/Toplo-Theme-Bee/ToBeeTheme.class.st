@@ -50,7 +50,7 @@ paddingXS	Control the extra small padding of the element.	number	8
 "
 Class {
 	#name : #ToBeeTheme,
-	#superclass : #ToStyleSheetTheme,
+	#superclass : #ToTheme,
 	#category : #'Toplo-Theme-Bee'
 }
 
@@ -77,26 +77,26 @@ ToBeeTheme >> declareBackgroundStyleWithTokenDefault: aDefaultColorToken tokenHo
 
 	| backgroundColorAnim |
 	" the animation must be shared by all writers which are using it to stop it correctly "
-	backgroundColorAnim := ToPropertyColorTransitionAnimation new
+	backgroundColorAnim := ToPropertyBackgroundColorTransitionAnimation new
 		                       duration: 150 milliSeconds.
 
 	self
 		when: ToInstallSkinEvent
-		write: (self property: #'background-color')
+		write: (self property: #'background')
 		with: [ :e | e valueOfTokenNamed: aDefaultColorToken ].
 	self
-		when: ToLeavedSkinEvent
-		write: (self property: #'background-color')
+		when: ToLeftSkinEvent
+		write: (self property: #'background')
 		with: [ :e | e valueOfTokenNamed: aDefaultColorToken ]
 		animation: backgroundColorAnim.
 	self
 		when: ToHoveredSkinEvent
-		write: (self property: #'background-color')
+		write: (self property: #'background')
 		with: [ :e | e valueOfTokenNamed: aHoverColorToken ]
 		animation: backgroundColorAnim.
 	self
 		when: ToPressedSkinEvent
-		write: (self property: #'background-color')
+		write: (self property: #'background')
 		with: [ :e | e valueOfTokenNamed: aPressedColorToken ]
 		animation: backgroundColorAnim
 ]
@@ -118,7 +118,7 @@ ToBeeTheme >> declareBorderStyleWithTokenDefault: aDefaultColorToken tokenHover:
 				width: (e valueOfTokenNamed: #'line-width');
 				build ].
 	self
-		when: ToLeavedSkinEvent
+		when: ToLeftSkinEvent
 		write: (self property: #border)
 		with: [ :e |
 			BlBorderBuilder new
@@ -179,7 +179,7 @@ ToBeeTheme >> declareCommonButtonRules [
 					ifTrue: [ Cursor webLink ]
 					ifFalse: [  ] ].
 		self
-			when: ToLeavedSkinEvent
+			when: ToLeftSkinEvent
 			write: (self property: #mouseCursor)
 			with: nil.
 
@@ -237,7 +237,7 @@ ToBeeTheme >> declareDashedBorderStyleWithTokenDefault: aDefaultColorToken token
 				dashArray: (e valueOfTokenNamed: #'dash-array');
 				build ].
 	self
-		when: ToLeavedSkinEvent
+		when: ToLeftSkinEvent
 		write: (self property: #border)
 		with: [ :e |
 			BlBorderBuilder new
@@ -310,11 +310,11 @@ ToBeeTheme >> declareDefaultButtonRules [
 	"Background"
 	self
 		when: ToDisabledSkinEvent
-		write: (self property: #'background-color')
+		write: (self property: #'background')
 		with: [ :e | e valueOfTokenNamed: #'color-bg-container-disabled' ].
 	self
 		when: ToInstallSkinEvent
-		write: (self property: #'background-color')
+		write: (self property: #'background')
 		with: [ :e | e valueOfTokenNamed: #'color-bg-container' ].
 
 	"Border"
@@ -363,7 +363,7 @@ ToBeeTheme >> declareIconInLabeledIconRules [
 
 	self
 		select: (ToImage asTypeSelector
-				 withParent: #'labeled-icon' asStampSelector
+				 withParent: ToLabeledIcon asTypeSelector
 				 atDepth: 2)
 		style: [
 			self write: (self property: #'layout-constraints') with: [ :e |
@@ -382,7 +382,6 @@ ToBeeTheme >> declareLabelRules [
 			with: [ :e |
 				e textAttributesBuilder
 					weight: (e valueOfTokenNamed: #'font-weight-strong');
-					defaultFontName: (e valueOfTokenNamed: #'font-family-code');
 					defaultFontSize: (e valueOfTokenNamed: #'font-size');
 					lineSpacing: (e valueOfTokenNamed: #'line-height');
 					yourself ].
@@ -508,7 +507,7 @@ ToBeeTheme >> declareLabelStyleWithTokenDefault: aDefaultColorToken tokenHover: 
 		write: (self property: #'button-label-text-foreground')
 		with: [ :e | e valueOfTokenNamed: aDefaultColorToken ].
 	self
-		when: ToLeavedSkinEvent
+		when: ToLeftSkinEvent
 		write: (self property: #'button-label-text-foreground')
 		with: [ :e | e valueOfTokenNamed: aDefaultColorToken ].
 	self
@@ -525,7 +524,7 @@ ToBeeTheme >> declareLabelStyleWithTokenDefault: aDefaultColorToken tokenHover: 
 ToBeeTheme >> declareLabeledIconInButtonRules [
 
 	self
-		select: (#'labeled-icon' asStampSelector
+		select: (ToLabeledIcon asTypeSelector
 				 withParent: #button asStampSelector
 				 atDepth: 1)
 		style: [
@@ -585,7 +584,7 @@ ToBeeTheme >> declareLinkButtonRules [
 		self declareNoBorder.
 		self
 			when: ToDisabledSkinEvent
-			write: (self property: #'background-color')
+			write: (self property: #'background')
 			with: [ :e | Color transparent ].
 
 		"Label"
@@ -612,7 +611,7 @@ ToBeeTheme >> declareNoBorder [
 				paint: Color transparent
 				width: (e valueOfTokenNamed: #'line-width') ].
 	self
-		when: ToLeavedSkinEvent
+		when: ToLeftSkinEvent
 		write: (self property: #'border')
 		with: [ :e |
 			BlBorder
@@ -646,7 +645,7 @@ ToBeeTheme >> declarePrimaryButtonRules [
 		style: [ "Background and border"
 			self
 				when: ToDisabledSkinEvent
-				write: (self property: #'background-color')
+				write: (self property: #'background')
 				with: [ :e | e valueOfTokenNamed: #'color-bg-container-disabled' ].
 
 			self select: #danger asStampSelector not style: [
@@ -682,7 +681,7 @@ ToBeeTheme >> declareTextButtonRules [
 		self declareNoBorder.
 		self
 		when: ToDisabledSkinEvent
-		write: (self property: #'background-color')
+		write: (self property: #'background')
 		with: [ :e | Color transparent ].
 
 		"Background"
@@ -721,17 +720,10 @@ ToBeeTheme >> declareTextPaneRules [
 				with: [ :e | 
 					e textAttributesBuilder
 						weight: (e valueOfTokenNamed: #'font-weight-strong');
-						defaultFontName: (e valueOfTokenNamed: #'font-family-code');
 						defaultFontSize: 28;
 						foreground: Color lightGray lighter;
 						lineSpacing: (e valueOfTokenNamed: #'line-height');
 						yourself ] ] ]
-]
-
-{ #category : #initialization }
-ToBeeTheme >> defaultElementStampsFor: anElement [ 
-
-	^ anElement defaultBeeStyleStamps
 ]
 
 { #category : #initialization }
@@ -745,8 +737,8 @@ ToBeeTheme >> initializeStyleRules [
 	self declareTextPaneRules 
 ]
 
-{ #category : #styling }
-ToBeeTheme >> skinClassFor: anElement [
+{ #category : #'skin creation' }
+ToBeeTheme >> newSkinFor: anElement [
 
-	^ ToBeeSkin
+	^ ToBeeSkin new
 ]

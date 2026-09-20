@@ -7,14 +7,14 @@ Class {
 	#category : #'Toplo-Widget-Album-Tests-TextField'
 }
 
-{ #category : #test }
+{ #category : #tests }
 ToTextFieldTest >> testPlaceholderText [
 
 	| e ph |
-	e := ToTextField new size: 100 asPoint.
+	e := ToTextField new extent: 100 asPoint.
 	e placeholderText: 'Enter text...'.
 	e showPlaceholder.
-	
-	ph := e currentPlaceholderLayer.
-	self assert: (ph children first text asString) equals: 'Enter text...'.
+
+	ph := e placeholderLayer.
+	self assert: ph children first text asString equals: 'Enter text...'
 ]

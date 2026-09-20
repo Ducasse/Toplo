@@ -12,17 +12,16 @@ ToOverlayWindowManagerTest >> testDefaultSizeHook [
 
 	| e windowManager win |
 	e := ToElement new.
-	space root addChild: e.
-	e position: 10 asPoint.
-	e size: 10 asPoint.
-	windowManager := ToOverlayWindowManager new.
-	windowManager onInstalledIn: e.
-	self assert: (windowManager defaultSizeHook isKindOf: BlockClosure).
-	win := windowManager newWindowEvent: nil.
-	win popup.
-	self waitTestingSpaces.
+	space deferAndSettle: [
+		space root addChild: e.
+		e position: 10 asPoint.
+		e extent: 10 asPoint ].
+	windowManager := ToAnchoredWindowManager overlay.
+	e addEventHandler: windowManager.
+	win := windowManager createNewWindowOnEvent: nil.
+	space deferAndSettle: [ win popup ].
 	self
-		assert: win bounds inSpace extent
+		assert: win measuredBounds inSpace extent
 		equals: e bounds inSpace extent
 ]
 
@@ -31,20 +30,35 @@ ToOverlayWindowManagerTest >> testElementEventHandlerClass [
 
 	| win e windowManager |
 	e := ToElement new.
-	space root addChild: e.
-	self waitTestingSpaces.
+	space deferAndSettle: [ space root addChild: e ].
 
-	windowManager := ToOverlayWindowManager new builder: [
-		                 :anchWin
-		                 :element |  ].
-	windowManager onInstalledIn: e.
-	win := windowManager newWindowEvent: nil.
-	win popup.
-	self waitTestingSpaces.
-	self assert: win element equals: e.
+	windowManager := ToAnchoredWindowManager overlay.
+	e addEventHandler: windowManager.
+	win := windowManager createNewWindowOnEvent: nil.
+	space deferAndSettle: [ win popup ].
+	self assert: win anchorElement equals: e.
 	self assert: (e eventDispatcher hasEventHandlerSuchThat: [ :eh |
-			 eh isKindOf: ToOverlayedEventHandler ]).
-	win close.
+		eh isKindOf: ToAnchoredWindowManager ]).
+	space deferAndSettle: [ win close ].
 	self assert: (e eventDispatcher hasEventHandlerSuchThat: [ :eh |
-			 eh isKindOf: ToOverlayedEventHandler ])
+		eh isKindOf: ToAnchoredWindowManager ])
+]
+
+{ #category : #tests }
+ToOverlayWindowManagerTest >> testElementExtentChangedEvent [
+
+	| e windowManager win |
+	e := ToElement new.
+	space deferAndSettle: [
+		space root addChild: e.
+		e position: 10 asPoint.
+		e extent: 10 asPoint ].
+	windowManager := ToAnchoredWindowManager overlay.
+	e addEventHandler: windowManager.
+	win := windowManager createNewWindowOnEvent: nil.
+	space deferAndSettle: [ win popup ].
+	self assert: win bounds inSpace extent equals: 10 asPoint.
+
+	space deferAndSettle: [ e extent: 100 asPoint ].
+	self assert: win bounds inSpace extent equals: 100 asPoint
 ]

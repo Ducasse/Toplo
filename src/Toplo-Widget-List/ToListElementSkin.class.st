@@ -1,7 +1,7 @@
 Class {
 	#name : #ToListElementSkin,
 	#superclass : #ToBasicListElementSkin,
-	#category : #'Toplo-Widget-List-Core-ListElement'
+	#category : #'Toplo-Widget-List-Core'
 }
 
 { #category : #'event handling' }
@@ -23,6 +23,10 @@ ToListElementSkin >> shortcutsToInstallIn: aListElement [
 					   combination: BlKeyCombination primaryA;
 					   action: [ :aShortcutEvent :aShortcut |
 						   aListElement selecter selectAll ]).
+			  stream nextPut: (BlShortcutWithAction new
+					   combination: BlKeyCombination builder shift primary a build;
+					   action: [ :aShortcutEvent :aShortcut |
+						   aListElement selecter deselectAll ]).
 
 			  stream nextPut: (BlShortcutWithAction new
 					   combination: BlKeyCombination builder shift arrowDown build;

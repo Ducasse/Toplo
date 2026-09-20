@@ -6,6 +6,7 @@ Class {
 	#instVars : [
 		'styleScript',
 		'inherits',
+		'local',
 		'writablePropertyIndex'
 	],
 	#category : #'Toplo-Core-StyleSheet'
@@ -25,6 +26,8 @@ ToStyleSheet class >> defaultWritablePropertyList [
 		  (ToFeatureProperty name: #height).
 		  (ToFeatureProperty name: #width).
 		  (ToFeatureProperty name: #margin).
+		  (ToFeatureProperty name: #startInterspace).
+		  (ToFeatureProperty name: #endInterspace).
 		  (ToFeatureProperty name: #padding).
 		  (ToFeatureProperty name: #icon).
 		  (ToFeatureProperty name: #label).
@@ -40,14 +43,6 @@ ToStyleSheet class >> defaultWritablePropertyList [
 								   { (BlTextForegroundAttribute paint: v) } ] ]).
 
 		  "others"
-		  (ToPseudoProperty
-			   name: #'background-color'
-			   reader: [ :e |
-				   e background paint
-					   ifNotNil: [ :f | f color ]
-					   ifNil: [ Color transparent ] ]
-			   writer: [ :e :v | e background: v ]).
-
 		  (ToPseudoProperty
 			   name: #'border-with-builder'
 			   reader: [ :e | e border ]
@@ -140,6 +135,7 @@ ToStyleSheet >> initialize [
 	super initialize.
 	styleScript := self defaultScript.
 	inherits := true.
+	local := true.
 	self initializeStyleRules.
 ]
 
@@ -147,18 +143,29 @@ ToStyleSheet >> initialize [
 ToStyleSheet >> initializeStyleRules [
 ]
 
-{ #category : #initialization }
+{ #category : #accessing }
+ToStyleSheet >> local [
+
+	^ local
+]
+
+{ #category : #accessing }
+ToStyleSheet >> local: aBoolean [
+
+	local := aBoolean
+]
+
+{ #category : #'api - hooks' }
 ToStyleSheet >> onInstalledIn: anElement [
 
 	anElement withAllChildrenBreadthFirstDo: [ :child |
 		child requestNewSkin ]
 ]
 
-{ #category : #initialization }
+{ #category : #'api - hooks' }
 ToStyleSheet >> onUninstalledIn: anElement [
 
-	anElement skinManagerDo: [ :sm |
-		sm requestUninstallSkinRecursivelyIn: anElement ]
+	
 ]
 
 { #category : #'accessing - writable properties' }
@@ -201,9 +208,11 @@ ToStyleSheet >> styleRules [
 ToStyleSheet >> writablePropertyIndex [
 
 	^ self rawWritablePropertyIndex ifNil: [
-		  self rawWritablePropertyIndex: ToPropertyIndex new.
-		  self rawWritablePropertyIndex addAllProperties: self defaultWritablePropertyList.
-		  self rawWritablePropertyIndex ]
+			  self rawWritablePropertyIndex: ToPropertyIndex new.
+			  local ifFalse: [
+					  self rawWritablePropertyIndex addAllProperties:
+						  self defaultWritablePropertyList ].
+			  self rawWritablePropertyIndex ]
 ]
 
 { #category : #'accessing - writable properties' }

@@ -7,15 +7,19 @@ Class {
 { #category : #accessing }
 ToSkinEvent >> elementDo: aBlock [
 
-	aBlock value: self target
-]
-
-{ #category : #'instance creation' }
-ToSkinEvent >> fromState: aState [
+	aBlock value: self currentTarget
 ]
 
 { #category : #sending }
 ToSkinEvent >> sendTo: anObject [
+
+	
+]
+
+{ #category : #sending }
+ToSkinEvent >> sendToSkin: aSkin [
+
+	self sendTo: aSkin
 
 	
 ]

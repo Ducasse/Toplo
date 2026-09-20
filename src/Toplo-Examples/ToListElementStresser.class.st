@@ -2,6 +2,7 @@ Class {
 	#name : #ToListElementStresser,
 	#superclass : #Object,
 	#instVars : [
+		'commandApplicationStrategy',
 		'tabsPanel',
 		'maxTab',
 		'maxRound',
@@ -9,9 +10,12 @@ Class {
 		'counter',
 		'listIdentifiers',
 		'maxPrimaryIntervals',
-		'maxNbTasks'
+		'maxNbTasks',
+		'endTime',
+		'startTime',
+		'round'
 	],
-	#category : #'Toplo-Examples'
+	#category : #'Toplo-Examples-Stressers'
 }
 
 { #category : #running }
@@ -27,7 +31,7 @@ ToListElementStresser class >> run [
 ToListElementStresser class >> runInSDL [
 
 	<script>
-	self new runInHost: BlOSWindowSDL2Host new
+	self new runInHost: BlOSWindowSDL2Host default
 ]
 
 { #category : #actions }
@@ -60,6 +64,16 @@ ToListElementStresser >> _actionHiddenIndexesIn: aList [
 	nb isZero ifTrue: [ ^ self ].
 	selected := (1 to: nb) collect: [ :i | self randIndexIn: aList ].
 	aList hiddenSelecter selectIndexes: selected
+]
+
+{ #category : #actions }
+ToListElementStresser >> _actionReplaceAllIn: aList [
+
+	| size |
+	size := self nextSizeForListNumber: 0.
+	aList dataAccessor removeAll.
+	aList dataAccessor addAll:
+		((1 to: size) collect: [ :i | 'Hello ' , i asString ])
 ]
 
 { #category : #actions }
@@ -198,12 +212,44 @@ ToListElementStresser >> afterRoundInList: aList [
 ]
 
 { #category : #running }
+ToListElementStresser >> applyCommand: aCommand [
+
+	| tab s |
+	tab := self tabsPanel items at: aCommand listNumber.
+	s := ' [' asRopedText , aCommand round asString asRopedText bold
+	     , ('/' , self maxRound asString , ']') asRopedText.
+	tab endElement: (ToAttributedLabel text: s).
+
+	(round \\ 10) isZero ifTrue: [
+			self doRemoveAllIn: aCommand list.
+			self doAddAllIn: aCommand list ].
+
+	self selectActionsToRun shuffled do: [ :act |
+		self perform: act with: aCommand list ]
+]
+
+{ #category : #actions }
+ToListElementStresser >> doAddAllIn: aList [
+
+	| size |
+	size := self nextSizeForListNumber: 0.
+	aList dataAccessor addAll:
+		((1 to: size) collect: [ :i | 'Hello ' , i asString ])
+]
+
+{ #category : #actions }
+ToListElementStresser >> doRemoveAllIn: aList [
+
+	aList dataAccessor removeAll
+]
+
+{ #category : #running }
 ToListElementStresser >> finishedInAllTabs [
 
-	^ tabsPanel tabs allSatisfy: [ :tab |
+	^ tabsPanel items allSatisfy: [ :tab |
 		  | list |
 		  list := tab userData at: #list.
-		  list userData at: #finishedStress ]
+		  list userData at: #finishedStress ifAbsent: [false] ]
 ]
 
 { #category : #initialization }
@@ -217,44 +263,53 @@ ToListElementStresser >> initialize [
 	maxNbTasks := 0.
 	rand := Random new.
 
-	tabsPanel := ToTabPane new.
+	tabsPanel := ToTabPaneElement new.
+	tabsPanel isFlowable: true.
+	tabsPanel isScrollable: false.
+	tabsPanel vertical: true.
+	tabsPanel matchParent.
 	listIdentifiers := Array new: self maxTab.
+
 
 	1 to: self maxTab do: [ :i |
 		| paneListAssoc tab list ident |
 		paneListAssoc := self newStressedListNumber: i.
 		list := paneListAssoc value.
 		ident := list userData at: #identifier.
-		tab := ToTab new.
+		tab := ToTabButton new.
 		tab userData at: #list put: list.
 		tab labelText: ident.
-		tab firstChild withNullSkin.
-		tab addChild: ToLabel new withNullSkin at: 2.
-		tab paneBuilder: [ :pane :theTabPane |
+		tab paneBuilder: [ :pane  |
 			pane addChild: paneListAssoc key ].
-		tabsPanel addTab: tab ].
+		tabsPanel addItem: tab ].
 
 	tabSelectionProcess := [
-	                       | round |
 	                       round := 0.
+	                       startTime := DateAndTime now.
 	                       [ self finishedInAllTabs ] whileFalse: [
 		                       | idx |
 		                       round := round + 1.
 		                       idx := (round \\ self maxTab + 1 max: 1)
 			                              min: self maxTab.
-		                       self tabsPanel enqueueTask:
-			                       (BlTaskAction new action: [
-				                        (self tabsPanel tabs at: idx) check ]).
-		                       1 seconds wait ] ] newProcess.
+		                       (self tabsPanel items at: idx) check.
+		                       1 seconds wait].
+	                       endTime := DateAndTime now.
+	                       (endTime - startTime) asDuration traceCr ]
+		                       newProcess.
 
 	tabSelectionProcess name: self class name.
-	tabSelectionProcess priority: Processor systemBackgroundPriority.
+	tabSelectionProcess priority: Processor userBackgroundPriority.
+
+	commandApplicationStrategy := BlQueueBasedCommandApplicationStrategy
+		                              new
+		                              element: self tabsPanel;
+		                              yourself.
 
 	self tabsPanel
-		addEventHandlerOn: BlElementAddedToSceneGraphEvent
+		addEventHandlerOn: ToAddedToSpaceEvent 
 		do: [ :event | tabSelectionProcess resume ].
 	self tabsPanel
-		addEventHandlerOn: BlElementRemovedFromSceneGraphEvent
+		addEventHandlerOn: ToRemovedFromSpaceEvent 
 		do: [ :event | tabSelectionProcess terminate ]
 ]
 
@@ -267,14 +322,14 @@ ToListElementStresser >> interRoundWaitDuration [
 { #category : #accessing }
 ToListElementStresser >> maxListSize [
 
-	^ 5000
+	^ 2000
 
 ]
 
 { #category : #accessing }
 ToListElementStresser >> maxRound [
 
-	^ maxRound ifNil: [ maxRound := 20000 ]
+	^ maxRound ifNil: [ maxRound := 2000 ]
 ]
 
 { #category : #accessing }
@@ -305,36 +360,45 @@ ToListElementStresser >> minListSize [
 { #category : #initialization }
 ToListElementStresser >> newListElement [ 
 
-	^ ToListElement new
+	^ ToListElement infinite
 ]
 
 { #category : #initialization }
 ToListElementStresser >> newSelectionBoardOn: aListElement [
 
-	| pane lab |
-	pane := ToPane horizontal.
-	pane padding: (BlInsets all: 3).
-	pane addChild: (lab := ToLabel new).
+	| pane lab labItem |
+	pane := ToMenuPane horizontal.
+	pane addItem: (ToMenuItem new
+			 labelText: 'Inspect';
+			 clickAction: [ :evt | evt target space inspect ];
+			 yourself).
+	pane addItem: (ToMenuItem new
+			 labelText: 'Statistics';
+			 clickAction: [ :evt | evt target space showStatisticsWindow ];
+			 yourself).
+	lab := ToLabel new.
+	labItem := ToCustomMenuItem new.
+	labItem addChild: lab.
+	pane addItem: labItem.
 	aListElement
 		addEventHandlerOn: ToListSelectionChangedEvent
 		do: [ :event |
 			| nb |
-			nb := aListElement selectionModel underlyingModel intervals size.
+			nb := aListElement selectionModel selectedIndexesIntervals size.
 			lab text: (self selectionResultsTextOn: aListElement) ].
+	"pane childrenDo: [ :child | child constraintsDo: [ :c | c linear vertical alignCenter ] ]."
 	^ pane
 ]
 
 { #category : #initialization }
 ToListElementStresser >> newStressedListNumber: aNumber [
 
-	| list process size ident priority suffix sieve pane |
+	| list process size ident priority suffix pane |
 	pane := ToPane vertical.
 	pane matchParent.
 
 	list := self newListElement.
 	list id: #list.
-	sieve := ToListElementSieve new.
-	list userData at: #sieve put: sieve.
 
 	priority := self nextProcessPriorityForListNumber: aNumber.
 	size := self nextSizeForListNumber: aNumber.
@@ -343,11 +407,11 @@ ToListElementStresser >> newStressedListNumber: aNumber [
 	ident := ident trimRight: [ :char | char isAlphaNumeric not ].
 
 	suffix := String streamContents: [ :stream |
-		          stream nextPutAll: ' ('.
-		          stream nextPutAll: priority asString.
-		          stream nextPutAll: ') '.
-		          stream nextPutAll: size asString.
-		          stream nextPutAll: ' ' ].
+			          stream nextPutAll: ' ('.
+			          stream nextPutAll: priority asString.
+			          stream nextPutAll: ') '.
+			          stream nextPutAll: size asString.
+			          stream nextPutAll: ' ' ].
 
 	listIdentifiers
 		at: aNumber
@@ -360,32 +424,33 @@ ToListElementStresser >> newStressedListNumber: aNumber [
 	list matchParent.
 
 	process := [
-	           | round |
-	           round := 0.
-	           list userData at: #finishedStress put: false.
-	           self maxRound timesRepeat: [
-		           round := round + 1.
-		           self processingRound: round inList: list number: aNumber.
-		           self afterRoundInList: list ].
-	           self processEndInList: list number: aNumber ] newProcess.
+		           | round |
+		           round := 0.
+		           list userData at: #finishedStress put: false.
+		           self maxRound timesRepeat: [
+				           round := round + 1.
+				           self
+					           processingRound: round
+					           inList: list
+					           number: aNumber.
+				           self afterRoundInList: list ].
+		           self processEndInList: list number: aNumber ] newProcess.
 
 	process name: self class name.
 	process priority: priority.
 
 	self tabsPanel
-		addEventHandlerOn: BlElementAddedToSceneGraphEvent
-		do: [ :event |
-			sieve isInstalled ifFalse: [ sieve onInstalledIn: list ].
-			process resume ].
+		addEventHandlerOn: ToAddedToSpaceEvent
+		do: [ :event | process resume ].
 	self tabsPanel
-		addEventHandlerOn: BlElementRemovedFromSceneGraphEvent
-		do: [ :event |
-			process terminate.
-			sieve isInstalled ifTrue: [ sieve onUninstalledIn: list ] ].
+		addEventHandlerOn: ToRemovedFromSpaceEvent
+		do: [ :event | process terminate ].
 
 	pane addChild: list.
 	pane addChild: (self newSelectionBoardOn: list).
-	list userData at: #identifier put: (ident asRopedText bold , suffix asRopedText).
+	list userData
+		at: #identifier
+		put: ident asRopedText bold , suffix asRopedText.
 
 	^ pane -> list
 ]
@@ -400,13 +465,7 @@ ToListElementStresser >> nextCounter [
 { #category : #private }
 ToListElementStresser >> nextProcessPriorityForListNumber: aNumber [
 
-	| priorities |
-	priorities := {
-		              Processor lowestPriority.
-		              Processor userBackgroundPriority.
-		              Processor systemBackgroundPriority }.
-
-	^ priorities at: aNumber \\ priorities size + 1
+	^ Processor userBackgroundPriority.
 ]
 
 { #category : #accessing }
@@ -416,7 +475,7 @@ ToListElementStresser >> nextSizeForListNumber: aNumber [
 		  ifTrue: [ rand nextIntegerBetween: 1 and: self minListSize ]
 		  ifFalse: [
 		  rand nextIntegerBetween: self minListSize and: self maxListSize ]"
-	^ 2000
+	^ self maxListSize
 ]
 
 { #category : #running }
@@ -424,23 +483,21 @@ ToListElementStresser >> processEndInList: aList number: aNumber [
 
 	| tab |
 	aList userData at: #finishedStress put: true.
-	tab := self tabsPanel tabs at: aNumber.
+	tab := self tabsPanel items at: aNumber.
 	self tabsPanel enqueueTask: (BlTaskAction new action: [
-			 tab firstChild text foreground: Color green muchDarker ])
+			 tab label text foreground: Color green muchDarker ])
 ]
 
 { #category : #running }
 ToListElementStresser >> processingRound: aRound inList: aList number: aNumber [
 
-	| tab s |
-	tab := self tabsPanel tabs at: aNumber.
-	s := ' [' asRopedText , aRound asString asRopedText bold
-	     , ('/' , self maxRound asString , ']') asRopedText.
-
-	self tabsPanel enqueueTask: (BlTaskAction new action: [
-			 (tab childAt: 2) text: s.
-			 self selectActionsToRun shuffled do: [ :act |
-				 self perform: act with: aList ] ])
+	commandApplicationStrategy
+		addCommand: (ToListElementStresserCommand new
+				 round: aRound;
+				 list: aList;
+				 listNumber: aNumber;
+				 yourself)
+		from: self
 ]
 
 { #category : #private }
@@ -490,9 +547,10 @@ ToListElementStresser >> selectActionsToRun [
 ToListElementStresser >> selectionResultsTextOn: aListElement [
 
 	| nb nbTasks |
-	nbTasks := self tabsPanel space taskQueue tasks size.
+	self tabsPanel space ifNil: [ ^ self ].
+	nbTasks := self tabsPanel space taskQueue size.
 	maxNbTasks := maxNbTasks max: nbTasks.
-	nb := aListElement selectionModel underlyingModel intervals size.
+	nb := aListElement selectionModel selectedIndexesIntervals size.
 	maxPrimaryIntervals := nb max: maxPrimaryIntervals.
 	^ 'Tasks: ', nbTasks asString, '/', maxNbTasks asString, ' -  Intervals: < primary ' , nb asString , '/'
 	  , maxPrimaryIntervals asString , ' >'

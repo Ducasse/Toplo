@@ -1,32 +1,46 @@
 Class {
 	#name : #ToInfiniteElement,
 	#superclass : #BlInfiniteElement,
-	#traits : 'TBlLayoutResizable',
-	#classTraits : 'TBlLayoutResizable classTrait',
+	#traits : 'TToInnerListElement',
+	#classTraits : 'TToInnerListElement classTrait',
 	#instVars : [
 		'listElement'
 	],
-	#category : #'Toplo-Widget-List-InnerInfinite'
+	#category : #'Toplo-Widget-List-InnerList-Infinite'
 }
 
-{ #category : #'instance creation' }
-ToInfiniteElement class >> onListElement: aListElement [
+{ #category : #'private - commands' }
+ToInfiniteElement >> addedDataSourceCommand: aCommand [
 
-	^ self basicNew
-		  listElement: aListElement;
-		  initialize
+	self requestLayout
 ]
 
-{ #category : #'private - commands' }
-ToInfiniteElement >> applyDataSourceFilterCommand: aDataSourceCommand [
+{ #category : #configuration }
+ToInfiniteElement >> applyConfiguration [
 
-	listElement applyDataSourceFilterCommand: aDataSourceCommand
+	super applyConfiguration.
+	self layout beHorizontal: self listElement isHorizontal.
+	self fitParent: listElement.
+	self childrenDo: [ :container | container applyConfiguration ].
+	self requestLayout
 ]
 
-{ #category : #'private - commands' }
-ToInfiniteElement >> applyDataSourceSieveCommand: aDataSourceCommand [
+{ #category : #'t - infinite accessing' }
+ToInfiniteElement >> cleanUpRecyclerAt: anIndex [
 
-	listElement applyDataSourceSieveCommand: aDataSourceCommand
+	self customRecycler removeNodeAt: anIndex in: self
+]
+
+{ #category : #layout }
+ToInfiniteElement >> consumeFinalStepCommands [
+
+	dataSourceManager consumeFinalStepCommandsIn: self
+]
+
+{ #category : #'t - infinite accessing' }
+ToInfiniteElement >> customRecycler [
+
+	^ self recycler customRecycler
 ]
 
 { #category : #initialization }
@@ -62,62 +76,65 @@ ToInfiniteElement >> defaultMouseScrollEventHandler [
 ]
 
 { #category : #initialization }
-ToInfiniteElement >> defaultScrollFlinger [
-	"Return class, actuall instantiation happens in initialize"
-	^ ToInfiniteScrollFlinger
+ToInfiniteElement >> defaultRecycler [
+
+	^ ToInfiniteRecycler new
 ]
 
-{ #category : #'scrolled event' }
-ToInfiniteElement >> disableScrolledEvent [
-
-	self eventDispatcher disableScrolledEvent 
+{ #category : #initialization }
+ToInfiniteElement >> defaultScrollFlinger [
+	"Return class, actuall instantiation happens in initialize"
+	^ ToListScrollFlinger
 ]
 
 { #category : #layout }
 ToInfiniteElement >> dispatchLayoutFinalStep [
 
 	super dispatchLayoutFinalStep.
-	dataSourceManager consumeFinalStepCommandsIn: self.
-
+	self assert: dataSourceManager hasCommands not.
+	self consumeFinalStepCommands
 ]
 
-{ #category : #'scrolled event' }
-ToInfiniteElement >> enableScrolledEvent [
+{ #category : #'t - inner list element' }
+ToInfiniteElement >> findElementHolderForDataSourcePosition: aPosition [
 
-	self eventDispatcher enableScrolledEvent 
+	^ super findElementHolderForDataSourcePosition: aPosition
 ]
 
-{ #category : #'node enumerating' }
-ToInfiniteElement >> fullyVisibleNodesDo: aBlock [
+{ #category : #'accessing - decoration' }
+ToInfiniteElement >> haveDecoration: aDecorationClass [
 
-	self nodesDo: aBlock
+	^ self itemDecorations anySatisfy: [ :d | d isKindOf: aDecorationClass ]
 ]
 
-{ #category : #'node enumerating' }
-ToInfiniteElement >> fullyVisibleNodesSelect: aBlock [
+{ #category : #'view - configuration' }
+ToInfiniteElement >> haveRowNumbers [
 
-	^ self nodesSelect: aBlock
+	^ self haveDecoration: BlRowNumberDecoration
 ]
 
 { #category : #initialization }
 ToInfiniteElement >> initialize [
 
 	super initialize.
-	self addEventHandler: ToListInnerContainerEventHandler new.
-	self matchParent
+	self addEventHandler: ToInfiniteListElementEventHandler new.
+	self elevation: (BlRelativeElevation elevation: 10)
+]
+
+{ #category : #initialization }
+ToInfiniteElement >> initializeDataSource [
+
+	super initializeDataSource.
+	self addEventHandlerOn: BlElementRemovedFromParentEvent doOnce: [
+			dataSource onDetached: self.
+			dataSource removeEventHandler: dataSourceObserver.
+			dataSourceManager := nil ]
 ]
 
 { #category : #'t - infinite accessing' }
-ToInfiniteElement >> innerContainer [ 
+ToInfiniteElement >> innerElement [ 
 
 	^ self
-]
-
-{ #category : #'private - invalidation' }
-ToInfiniteElement >> invalidateItemDecorations [
-
-	super invalidateItemDecorations.
-	listElement invalidateItemDecorations
 ]
 
 { #category : #accessing }
@@ -126,98 +143,58 @@ ToInfiniteElement >> listElement [
 	^ listElement
 ]
 
-{ #category : #private }
-ToInfiniteElement >> listElement: aListElement [
-
-	listElement := aListElement
-]
-
 { #category : #'instance creation' }
 ToInfiniteElement >> newNodeHolderFromDataSource: aDataSource [
 
-	^ listElement nodeManager newNodeHolder
+	^ listElement nodeManager newHolder
 ]
 
-{ #category : #'accessing - nodes' }
-ToInfiniteElement >> nodeAt: anIndex [
-
-	" return the holder for the data at anIndex according to currently viewed data range. 
-	Returns nil if anIndex is not currently viewed in the infinite element"
-	^ (self findElementHolderForDataSourcePosition: anIndex)
-		  ifNotNil: [ :holder | holder itemElement ]
-		  ifNil: [  ]
-]
-
-{ #category : #'accessing - children' }
-ToInfiniteElement >> nodeContainingGlobalPosition: aPoint [
-
-	self nodesDo: [ :node |
-		(node containsGlobalPoint: aPoint) ifTrue: [ ^ node ] ].
-	^ nil
-]
-
-{ #category : #'accessing - nodes' }
-ToInfiniteElement >> nodeGroupsSatisfying: aBlock [
-	" return an array of collection. Each collection contains a list of adjacent selected nodes "
-
-	^ Array streamContents: [ :stream |
-		  | g |
-		  g := OrderedCollection new.
-		  self partlyVisibleNodesDo: [ :node |
-			  (aBlock value: node)
-				  ifTrue: [ g add: node ]
-				  ifFalse: [
-					  g ifNotEmpty: [
-						  stream nextPut: g.
-						  g := OrderedCollection new ] ] ].
-		  g ifNotEmpty: [ stream nextPut: g ] ]
-]
-
-{ #category : #'node enumerating' }
-ToInfiniteElement >> nodes [
+{ #category : #'t - inner list element - requirements' }
+ToInfiniteElement >> nodeContainers [
 
 	^ self children
 ]
 
-{ #category : #'node enumerating' }
-ToInfiniteElement >> nodesDo: aBlock [
+{ #category : #'t - inner list element - requirements' }
+ToInfiniteElement >> nodeContainersDo: aBlock [
 
 	self childrenDo: [ :node | aBlock value: node ]
 ]
 
-{ #category : #'node enumerating' }
-ToInfiniteElement >> nodesSelect: aBlock [
+{ #category : #'private - commands' }
+ToInfiniteElement >> offsetPositionRecordsForFilter: aStartPosition itemCount: anItemCount [
 
-	^ Array streamContents: [ :stream |
-		  self nodesDo: [ :node |
-			  (aBlock value: node) ifTrue: [ stream nextPut: node ] ] ]
+	self unfilteredChildrenDo: [ :anElement |
+			| anElementHolder |
+			anElementHolder := self elementHolderOf: anElement.
+			(anElementHolder shouldIgnore not and: [
+				 anElementHolder position >= aStartPosition ]) ifTrue: [
+				anElementHolder offsetPositionBy: anItemCount ] ].
+	self requestLayout
 ]
 
-{ #category : #'node enumerating' }
-ToInfiniteElement >> nodesWithIndexDo: aBlock [
+{ #category : #'private - commands' }
+ToInfiniteElement >> offsetPositionRecordsForInsert: aStartPosition itemCount: anItemCount [
 
-	self nodesDo: [ :node |
-		aBlock value: node value: node holder position ]
+	super offsetPositionRecordsForInsert: aStartPosition itemCount: anItemCount.
+	listElement selecter
+		shiftSelection: anItemCount
+		from: aStartPosition
 ]
 
-{ #category : #'hooks - scrolling' }
-ToInfiniteElement >> onScrolled: aPoint [
+{ #category : #'private - commands' }
+ToInfiniteElement >> offsetPositionRecordsForRemove: aPositionStart itemCount: anItemCount [
 
-	listElement onScrolled: aPoint
+	super offsetPositionRecordsForRemove: aPositionStart itemCount: anItemCount.
+	listElement selecter
+		shiftSelection: anItemCount negated
+		from: aPositionStart
 ]
 
-{ #category : #'node enumerating' }
+{ #category : #'t - inner list element - requirements' }
 ToInfiniteElement >> partlyVisibleNodesDo: aBlock [
 
-	self nodesDo: aBlock
-]
-
-{ #category : #'node enumerating' }
-ToInfiniteElement >> partlyVisibleNodesSelect: aBlock [
-
-	^ Array streamContents: [ :stream |
-		  self partlyVisibleNodesDo: [ :node |
-			  (aBlock value: node) ifTrue: [ stream nextPut: node ] ] ]
+	self nodeContainersDo: aBlock
 ]
 
 { #category : #private }
@@ -228,32 +205,6 @@ ToInfiniteElement >> scrollToDataSourcePosition: anIndex [
 	it is positionned at the top or at the bottom of the listElement "
 
 	self scrollToPosition: anIndex 
-]
-
-{ #category : #private }
-ToInfiniteElement >> scrollToIndex: anIndex [
-	"Request a scrollable widget to scroll to an item (logical or physical) at a given index,
-	which can, for example, be a data source position or child index"
-
-	self
-		deprecated: 'Use scrollToDataSourcePosition: instead'
-		transformWith: '`@receiver scrollToIndex: `@argument'
-			-> '`@receiver scrollToDataSourcePosition: `@argument'.
-
-	self scrollToDataSourcePosition: anIndex
-]
-
-{ #category : #private }
-ToInfiniteElement >> scrollToIndexAtTop: anIndex [
-	"Request a scrollable widget to scroll to an item (logical or physical) at a given index,
-	which can, for example, be a data source position or child index"
-	"As a result, item at anIndex is positionned at the top of the listElement"
-	self
-		deprecated: 'Use scrollToDataSourcePosition: instead'
-		transformWith: '`@receiver scrollToIndexAtTop: `@argument'
-			-> '`@receiver scrollToDataSourcePosition: `@argument'.
-
-	self scrollToDataSourcePosition: anIndex
 ]
 
 { #category : #private }
@@ -276,15 +227,6 @@ ToInfiniteElement >> scrollTowardStartToDataSourcePosition: anIndex [
 	self scrollToPosition: anIndex 
 ]
 
-{ #category : #'accessing - children' }
-ToInfiniteElement >> selectableNodeContainingGlobalPosition: aPoint [
-
-	self nodesDo: [ :node |
-		((node containsGlobalPoint: aPoint) and: [ node holder isSelectable ])
-			ifTrue: [ ^ node ] ].
-	^ nil
-]
-
 { #category : #private }
 ToInfiniteElement >> smoothScrollToDataSourcePosition: anIndex [
 	"Request a scrollable widget to scroll to an item (logical or physical) at a given index,
@@ -293,10 +235,26 @@ ToInfiniteElement >> smoothScrollToDataSourcePosition: anIndex [
 	self smoothScrollToPosition: anIndex
 ]
 
+{ #category : #accessing }
+ToInfiniteElement >> trackElement [
+
+	^ self
+]
+
 { #category : #'view - configuration' }
 ToInfiniteElement >> withRowNumbers [
 
 	self withDecoration: ToInfiniteRowNumberDecoration
+]
+
+{ #category : #'view - configuration' }
+ToInfiniteElement >> withRowNumbers: aBoolean [
+
+	aBoolean = self haveRowNumbers ifTrue: [ ^ self ].
+	aBoolean
+		ifTrue: [ self withRowNumbers ]
+		ifFalse: [ self withoutRowNumbers ].
+	listElement requestUpdateAllSelections
 ]
 
 { #category : #'view - configuration' }

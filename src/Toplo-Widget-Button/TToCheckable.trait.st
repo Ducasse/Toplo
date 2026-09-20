@@ -3,29 +3,34 @@ Trait {
 	#category : #'Toplo-Widget-Button-Checkable'
 }
 
-{ #category : #'t - checkable - group' }
-TToCheckable >> addToGroup: aGroup [
+{ #category : #'t - checkable - accessing' }
+TToCheckable >> allowIndeterminate [
 
-	self
-		deprecated: 'send #registerInGroup: instead'
-		transformWith:
-		'`@receiver addToGroup: `@arg'
-		-> '`@receiver registerInGroup: `@arg'.
-
-
-	self registerInGroup: aGroup
+	^ self checkableState allowIndeterminate
 ]
 
-{ #category : #'t - checkable - testing' }
-TToCheckable >> allowUnchecking [
+{ #category : #'t - checkable - accessing' }
+TToCheckable >> allowIndeterminate: aBoolean [
 
-	^ self group isNil or: [ self group allowUnchecking ]
+	self checkableState allowIndeterminate: aBoolean
 ]
 
 { #category : #'t - checkable  - protocol' }
 TToCheckable >> check [
 
 	self checked: true
+]
+
+{ #category : #'t - checkable - accessing' }
+TToCheckable >> checkableEventHandler [
+
+	^ self checkableState ifNotNil: [ :cd | cd eventHandler ]
+]
+
+{ #category : #'t - checkable - accessing' }
+TToCheckable >> checkableEventHandler: anEventHandler [
+
+	self checkableState eventHandler: anEventHandler
 ]
 
 { #category : #'t - checkable  - protocol' }
@@ -35,92 +40,83 @@ TToCheckable >> checkableEventHandlerClass [
 ]
 
 { #category : #'t - checkable - accessing' }
+TToCheckable >> checkableState [
+
+	^ self userData at: #checkableState ifAbsent: [  ]
+]
+
+{ #category : #'t - checkable - accessing' }
+TToCheckable >> checkableState: aCheckableState [
+
+	self userData at: #checkableState put: aCheckableState
+]
+
+{ #category : #'t - checkable - accessing' }
 TToCheckable >> checked [
 
-	^ self rawChecked
+	^ self checkableState checked
 ]
 
-{ #category : #'t - checkable - accessing' }
+{ #category : #'t - checkable  - protocol' }
 TToCheckable >> checked: aBooleanOrIndeterminate [
 
-	| current |
-	aBooleanOrIndeterminate ifNil: [ Error signal: 'nil not allowed' ].
-	(aBooleanOrIndeterminate isSymbol and: [ self withIndeterminate not ])
-		ifTrue: [
-			Error signal:
-				'a symbol not allowed except when indeterminate is explicitly allowed ' ].
-	self isDisabled ifTrue: [ ^ self ].
-	current := self rawChecked.
-	self group ifNotNil: [ :grp |
-		(grp allowChangeWith: aBooleanOrIndeterminate forCheckable: self)
-			ifFalse: [ ^ self ] ].
-	aBooleanOrIndeterminate = current ifTrue: [ ^ self ].
-	self privateChecked: aBooleanOrIndeterminate.
-	self dispatchEvent: (ToCheckableChangedEvent new
-			 checked: self rawChecked;
-			 yourself)
+	self checkableState requestChecked: aBooleanOrIndeterminate 
 ]
 
 { #category : #'t - checkable - accessing' }
-TToCheckable >> ensureCheckableData [
+TToCheckable >> ensureCheckableState [
 
-	self rawCheckableData ifNil: [
-		self rawCheckableData: ToCheckableData new ]
+	self checkableState ifNil: [
+		self checkableState: (ToCheckableState new
+				 owner: self;
+				 yourself) ]
 ]
 
 { #category : #'t - checkable - group' }
 TToCheckable >> group [
 
-	^ self rawGroup
+	^ self checkableState ifNotNil: [ :cd | cd group ]
 ]
 
 { #category : #'t - checkable - group' }
 TToCheckable >> group: aCheckableGroup [
 
-	self withIndeterminate ifTrue: [
+	self allowIndeterminate ifTrue: [
 		Error signal:
 			'Invalid checkable use: indeterminate state is not allowed with a checkable group' ].
-	self rawGroup: aCheckableGroup
-]
-
-{ #category : #'t - checkable - testing' }
-TToCheckable >> hasNoneStrategy [
-
-	^ self group isNil or: [ self group hasNoneStrategy ]
+	self checkableState group: aCheckableGroup
 ]
 
 { #category : #'t - checkable  - protocol' }
-TToCheckable >> initializeCheckable [
+TToCheckable >> initializeAsCheckable [
 
-	self ensureCheckableData.
-	self rawCheckableEventHandler: self newCheckableEventHandler .
-	self addEventHandler: self rawCheckableEventHandler
+	self ensureCheckableState.
+	self checkableEventHandler: self newCheckableEventHandler .
+	self addEventHandler: self checkableEventHandler
 ]
 
 { #category : #'t - checkable - testing' }
 TToCheckable >> isCheckable [
 
-	^ self rawCheckableData notNil
+	^ self checkableState notNil
 ]
 
 { #category : #'t - checkable - testing' }
 TToCheckable >> isChecked [
 
-	" since checked can be nil, test is with = "
-	^ self checked = true
+	^ self isCheckable and: [ self checkableState isChecked ]
 ]
 
 { #category : #'t - checkable - testing' }
 TToCheckable >> isIndeterminate [
 
-	^ self checked isSymbol
+	^ self isCheckable and: [ self checkableState isIndeterminate ]
 ]
 
 { #category : #'t - checkable - testing' }
 TToCheckable >> isUnchecked [
 
-	" since checked can be nil, test is with = "
-	^ self checked = false
+	^ self isCheckable and: [ self checkableState isUnchecked ]
 ]
 
 { #category : #'t - checkable  - protocol' }
@@ -129,74 +125,16 @@ TToCheckable >> newCheckableEventHandler [
 	^ self checkableEventHandlerClass new
 ]
 
-{ #category : #'t - checkable - private protocol' }
-TToCheckable >> nextCheckValue [
+{ #category : #'t - checkable - accessing' }
+TToCheckable >> privateChecked: aBoolean [
 
-	self withIndeterminate ifTrue: [ " unchecked -> indeterminate -> checked"
-		self isIndeterminate ifTrue: [ ^ true ].
-		self isChecked ifTrue: [ ^ false ].
-		^ #indeterminate ].
-	^ self checked not
-]
-
-{ #category : #'t - checkable - private protocol' }
-TToCheckable >> privateChecked: aBooleanOrIndeterminate [
-
-	| prev request |
-	request := aBooleanOrIndeterminate.
-	self rawChecked = request ifTrue: [ ^ self ].
-	prev := self checked.
-	self rawChecked: request.
-	" finally dispatch the event used to generate the state for the skin "
-	self dispatchEvent: (ToCheckableCheckEvent current: request previous: prev)
+	self checkableState privateChecked: aBoolean
 ]
 
 { #category : #'t - checkable - accessing' }
-TToCheckable >> rawCheckableData [
+TToCheckable >> privateChecked: aBoolean onEvent: anEvent [
 
-	^ self explicitRequirement 
-]
-
-{ #category : #'t - checkable - accessing' }
-TToCheckable >> rawCheckableData: aCheckableData [
-
-	^ self explicitRequirement 
-]
-
-{ #category : #'t - checkable - accessing' }
-TToCheckable >> rawCheckableEventHandler [
-
-	^ self rawCheckableData ifNotNil: [ :cd | cd eventHandler ]
-]
-
-{ #category : #'t - checkable - accessing' }
-TToCheckable >> rawCheckableEventHandler: anEventHandler [
-
-	self rawCheckableData eventHandler: anEventHandler
-]
-
-{ #category : #'t - checkable - accessing' }
-TToCheckable >> rawChecked [
-
-	^ self rawCheckableData ifNotNil: [ :cd | cd checked ]
-]
-
-{ #category : #'t - checkable - accessing' }
-TToCheckable >> rawChecked: aBoolean [
-
-	self rawCheckableData checked: aBoolean
-]
-
-{ #category : #'t - checkable - group' }
-TToCheckable >> rawGroup [
-
-	^ self rawCheckableData ifNotNil: [ :cd | cd group ]
-]
-
-{ #category : #'t - checkable - group' }
-TToCheckable >> rawGroup: aGroup [
-
-	self rawCheckableData group: aGroup
+	self checkableState privateChecked: aBoolean onEvent: anEvent
 ]
 
 { #category : #'t - checkable - group' }
@@ -209,27 +147,32 @@ TToCheckable >> registerInGroup: aGroup [
 { #category : #'t - checkable  - protocol' }
 TToCheckable >> releaseCheckable [
 
-	self removeEventHandler: self rawCheckableEventHandler.
-	self rawCheckableEventHandler: nil.
+	self removeEventHandler: self checkableEventHandler.
+	self checkableEventHandler: nil.
 ]
 
-{ #category : #'t - checkable - group' }
-TToCheckable >> removeFromGroup [
-
-	self
-		deprecated: 'send #unregisterFromGroup instead'
-		transformWith:
-		'`@receiver removeFromGroup'
-		-> '`@receiver unregisterFromGroup'.
-
-
-	self unregisterFromGroup
-]
-
-{ #category : #'t - checkable - private protocol' }
+{ #category : #'t - checkable  - protocol' }
 TToCheckable >> switchToNextCheckState [
 
-	self checked: self nextCheckValue 
+	self checkableState switchToNextCheckState
+]
+
+{ #category : #'t - checkable  - protocol' }
+TToCheckable >> switchToNextCheckStateOnClick [
+
+	^ self checkableState switchToNextCheckStateOnClick
+]
+
+{ #category : #'t - checkable  - protocol' }
+TToCheckable >> switchToNextCheckStateOnClick: aBoolean [
+
+	self checkableState switchToNextCheckStateOnClick: aBoolean
+]
+
+{ #category : #'t - checkable  - protocol' }
+TToCheckable >> switchToNextCheckStateOnEvent: anEvent [
+
+	self checkableState switchToNextCheckStateOnEvent: anEvent
 ]
 
 { #category : #'t - checkable  - protocol' }
@@ -241,17 +184,6 @@ TToCheckable >> uncheck [
 { #category : #'t - checkable - group' }
 TToCheckable >> unregisterFromGroup [
 
-	self group unregister: self
-]
-
-{ #category : #'t - checkable - accessing' }
-TToCheckable >> withIndeterminate [
-
-	^ self rawCheckableData ifNotNil: [ :cd | cd withIndeterminate ]
-]
-
-{ #category : #'t - checkable - accessing' }
-TToCheckable >> withIndeterminate: aBoolean [
-
-	self rawCheckableData withIndeterminate: aBoolean
+	self group unregister: self.
+	self group: nil
 ]

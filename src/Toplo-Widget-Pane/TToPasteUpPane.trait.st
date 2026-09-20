@@ -1,6 +1,6 @@
 Trait {
 	#name : #TToPasteUpPane,
-	#category : #'Toplo-Widget-Pane'
+	#category : #'Toplo-Widget-Pane-Utils'
 }
 
 { #category : #'t - paste-up pane' }
@@ -25,19 +25,7 @@ TToPasteUpPane >> initialGap: anInteger [
 ]
 
 { #category : #'t - paste-up pane' }
-TToPasteUpPane >> pasteUpField [
-
-	^ self userData at: #pasteUpField
-]
-
-{ #category : #'t - paste-up pane' }
-TToPasteUpPane >> pasteUpField: aLayer [
-
-	self userData at: #pasteUpField put: aLayer
-]
-
-{ #category : #'t - paste-up pane' }
-TToPasteUpPane >> setUpAsPasteUp [
+TToPasteUpPane >> initializeAsPasteUp [
 
 	| field |
 	field := ToPlaceholderLayer new.
@@ -64,4 +52,16 @@ TToPasteUpPane >> setUpAsPasteUp [
 			dragged position: event position - self initialGap.
 			field removeChild: dragged.
 			self addChild: dragged ] ]
+]
+
+{ #category : #'t - paste-up pane' }
+TToPasteUpPane >> pasteUpField [
+
+	^ self userData at: #pasteUpField
+]
+
+{ #category : #'t - paste-up pane' }
+TToPasteUpPane >> pasteUpField: aLayer [
+
+	self userData at: #pasteUpField put: aLayer
 ]

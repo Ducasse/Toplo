@@ -1,54 +1,64 @@
 Class {
 	#name : #ToMenuItemEventHandler,
 	#superclass : #BlCustomEventHandler,
-	#instVars : [
-		'target'
-	],
-	#category : #'Toplo-Widget-Menu-Basic'
+	#category : #'Toplo-Widget-Menu-Items'
 }
+
+{ #category : #'action handling' }
+ToMenuItemEventHandler >> actionPoolRunnedEvent: anEvent [
+
+	" all actions are runned, now close the window "
+	self bottomUpCloseWindowRequestOnEvent: anEvent
+]
+
+{ #category : #'action handling' }
+ToMenuItemEventHandler >> bottomUpCloseWindowRequestOnEvent: anEvent [
+	" ask the window manager to actually manage the window closing "
+
+	| target |
+	target := anEvent currentTarget.
+	target menuPaneDo: [ :mp | mp stopAutoOpen ].
+	target closeOnPicking ifFalse: [ ^ self ].
+	target parentMenuDo: [ :m |
+		m manager bottomUpCloseWindowRequestOnEvent: anEvent ]
+]
 
 { #category : #'api - accessing' }
 ToMenuItemEventHandler >> eventsToHandle [
 
-	^  { BlMouseEnterEvent. BlMouseUpEvent }
+	^  { BlMouseEnterEvent. BlMouseUpEvent. ToActionPoolRunnedEvent }
 ]
 
 { #category : #'mouse handlers' }
 ToMenuItemEventHandler >> mouseEnterEvent: anEvent [
 
-	" check event and current target "
-	(anEvent anyButtonPressed and: [ anEvent currentTarget ~= target ])
-		ifTrue: [ ^ self ].
-
-	target isTopMenu ifTrue: [ ^ self ].
-	target closeSiblingMenuWindow.
-	target isMenu ifFalse: [ ^ self ].
-	target closeWindow.
+	| target |
+	target := anEvent currentTarget.
+	target isEnabled ifFalse: [ ^ self ].
+	target menuPaneDo: [ :mp |
+		mp isAutoOpenManagementAllowed ifFalse: [ ^ self ] ].
+	target closeAllSiblingMenuWindows.
+	target menuPane
+		ifNil: [ target isSubmenu ifFalse: [ ^ self ] ]
+		ifNotNil: [ :mb | mb isAutoOpen ifFalse: [ ^ self ] ].
+	target isOpened ifTrue: [ ^ self ].
+	target isInline ifTrue: [ ^ self ].
 	target popupEvent: anEvent
 ]
 
 { #category : #'mouse handlers' }
 ToMenuItemEventHandler >> mouseUpEvent: anEvent [
 
-	" check event and current target "
+	| target |
+	target := anEvent currentTarget.
+	target isEnabled ifFalse: [ ^ self ].
 
-	(anEvent currentTarget ~= target)
-		ifTrue: [ ^ self ].
-
-	target closeOnMouseEvent ifFalse: [ ^ self ].
-	target rootMenu closeWindow
-]
-
-{ #category : #'api - hooks' }
-ToMenuItemEventHandler >> onInstalledIn: anElement [
-
-	super onInstalledIn: anElement.
-	target := anElement
-]
-
-{ #category : #'api - hooks' }
-ToMenuItemEventHandler >> onUninstalledIn: anElement [
-
-	super onUninstalledIn: anElement.
-	target := nil
+	target closeOnPicking ifFalse: [
+			^ self ].
+	" if the item has one or several linkActions, do nothing here. 
+	The window can't be closed before all actions are runned.
+	The window closing will occur on ToActionPoolRunnedEvent receiving
+	( see actionPoolRunnedEvent: )"
+	target actionPoolDo: [ :la | ^ self ].
+	self bottomUpCloseWindowRequestOnEvent: anEvent
 ]

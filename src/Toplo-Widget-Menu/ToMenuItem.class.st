@@ -1,46 +1,21 @@
+"
+I'm menu item based on triplet element trait (see `TToTripletElement`). 
+Basically I'm composed of three subelements a start, a middle and an end part.
+"
 Class {
 	#name : #ToMenuItem,
 	#superclass : #ToGeneralButtonMenuItem,
-	#traits : 'TToElementWithLabeledIcon',
-	#classTraits : 'TToElementWithLabeledIcon classTrait',
-	#category : #'Toplo-Widget-Menu-Basic'
+	#traits : 'TToOrientable + TToDirectional + TToTripletContainer + TToTripletElement + TToLabeledIcon + TToCheckable',
+	#classTraits : 'TToOrientable classTrait + TToDirectional classTrait + TToTripletContainer classTrait + TToTripletElement classTrait + TToLabeledIcon classTrait + TToCheckable classTrait',
+	#category : #'Toplo-Widget-Menu-Items'
 }
-
-{ #category : #initialization }
-ToMenuItem >> buttonClass [
-
-	^ ToButton 
-]
-
-{ #category : #testing }
-ToMenuItem >> closeOnMouseEvent [
-
-	^ self isTopMenu not
-]
 
 { #category : #initialization }
 ToMenuItem >> initialize [ 
 
 	super initialize.
-	self addStamp: #'menu-item'.
+	self initializeAsTripletElement.
 	self endElement: self newRightHandSide
-]
-
-{ #category : #'t - element with labeled icon - accessing' }
-ToMenuItem >> labeledIcon [ 
-
-	^ self button labeledIcon 
-]
-
-{ #category : #initialization }
-ToMenuItem >> newFiller [
-
-	^ BlElement new
-		  constraintsDo: [ :c |
-			  c horizontal exact: 0.
-			  c vertical matchParent ];
-		  id: #filler;
-		  yourself
 ]
 
 { #category : #skin }
@@ -61,4 +36,10 @@ ToMenuItem >> newRightHandSide [
 		c linear vertical alignCenter.
 		c linear horizontal alignCenter ].
 	^ rhs
+]
+
+{ #category : #configuration }
+ToMenuItem >> newToConfiguration [ 
+
+	^ ToTripletElementConfiguration new
 ]

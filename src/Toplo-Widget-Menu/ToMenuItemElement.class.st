@@ -1,34 +1,24 @@
+"
+I'm a data item for menu item list.
+"
 Class {
 	#name : #ToMenuItemElement,
-	#superclass : #ToElement,
-	#instVars : [
-		'parentMenu'
-	],
-	#category : #'Toplo-Widget-Menu-Basic'
+	#superclass : #ToListItem,
+	#traits : 'TToMenuItem',
+	#classTraits : 'TToMenuItem classTrait',
+	#category : #'Toplo-Widget-Menu-Items'
 }
 
-{ #category : #'adding-removing' }
-ToMenuItemElement >> addedInMenu: aMenu [
+{ #category : #configuration }
+ToMenuItemElement >> applyConfiguration [
 
-	self parentMenu: aMenu
+	super applyConfiguration.
+	self vFitContent
 ]
 
-{ #category : #testing }
-ToMenuItemElement >> closeOnMouseEvent [
-
-	^ false
-]
-
-{ #category : #'adding-removing' }
-ToMenuItemElement >> closeSiblingMenuWindow [
-
-	self parentMenu ifNil: [ ^ self ].
-	self parentMenu items do: [ :it |
-		it menuWindowDo: [ :w | w isOpened ifTrue: [ w close ] ] ]
-]
-
-{ #category : #'menu window' }
+{ #category : #'t - menu window model' }
 ToMenuItemElement >> closeWindow [
+
 ]
 
 { #category : #initialization }
@@ -43,8 +33,32 @@ ToMenuItemElement >> defaultEventHandlerClass [
 	^ ToMenuItemEventHandler
 ]
 
+{ #category : #initialization }
+ToMenuItemElement >> defaultLayout [
+
+	^ BlLinearLayout horizontal
+]
+
 { #category : #testing }
 ToMenuItemElement >> hasIcon [
+
+	^ false
+]
+
+{ #category : #testing }
+ToMenuItemElement >> hasInlineWindow [
+
+	^ false
+]
+
+{ #category : #testing }
+ToMenuItemElement >> hasItems [ 
+
+	^ false
+]
+
+{ #category : #testing }
+ToMenuItemElement >> hasMenuItems [ 
 
 	^ false
 ]
@@ -61,27 +75,39 @@ ToMenuItemElement >> includes: anElement [
 ToMenuItemElement >> initialize [
 
 	super initialize.
-	self layout: BlLinearLayout horizontal.
+	self closeOnPicking: true.
 	self addEventHandler: self defaultEventHandler.
-	self initializeWithMenuItemConstraints
-
-]
-
-{ #category : #initialization }
-ToMenuItemElement >> initializeWithMenuItemConstraints [ 
-
-	self hMatchParent.
-	self vFitContent.
-
+	self constraintsDo: [ :c | c linear vertical alignCenter ]
 ]
 
 { #category : #testing }
-ToMenuItemElement >> isMenu [
+ToMenuItemElement >> isCircularMenuItem [
+
+	^ self
+		  withAllParentsDetect: [ :p | p isKindOf: ToCircularMenuNodeContainer ]
+		  ifFound: [ :p | true ]
+		  ifNone: [ false ]
+]
+
+{ #category : #testing }
+ToMenuItemElement >> isInline [
 
 	^ false
 ]
 
-{ #category : #'menu window' }
+{ #category : #testing }
+ToMenuItemElement >> isMenuButton [
+
+	^ true
+]
+
+{ #category : #testing }
+ToMenuItemElement >> isMenuPaneMenu [
+
+	^ false
+]
+
+{ #category : #testing }
 ToMenuItemElement >> isOpened [
 
 	^ false
@@ -89,49 +115,55 @@ ToMenuItemElement >> isOpened [
 	
 ]
 
-{ #category : #testing }
-ToMenuItemElement >> isSubmenu [ 
-
-	^ false
-]
-
-{ #category : #testing }
+{ #category : #'t - menu window model' }
 ToMenuItemElement >> isTopMenu [
 
 	^ false
 ]
 
-{ #category : #'menu window' }
+{ #category : #'t - menu window model' }
+ToMenuItemElement >> menuPaneDo: aBlock [
+
+	| mb |
+	mb := self menuPane ifNil: [ ^ self ].
+	aBlock value: mb
+]
+
+{ #category : #'t - menu window model' }
 ToMenuItemElement >> menuWindowDo: aValuable [
 ]
 
-{ #category : #'parent menu' }
-ToMenuItemElement >> parentMenu [
+{ #category : #skin }
+ToMenuItemElement >> newRawSkin [
 
-	 ^ parentMenu
+	^ ToMenuItemElementSkin new
 ]
 
-{ #category : #'parent menu' }
-ToMenuItemElement >> parentMenu: aMenu [
+{ #category : #'event handling' }
+ToMenuItemElement >> onOutsideEvent: anEvent [
 
-	parentMenu := aMenu
+	self isInline ifTrue: [ ^ self ].
+	self menuPaneDo: [ :mb | mb stopAutoOpen ]
 ]
 
-{ #category : #'parent menu' }
-ToMenuItemElement >> parentMenuDo: aBlock [
-
-	self parentMenu ifNil: [ ^ self ].
-	aBlock value: self parentMenu
+{ #category : #'t - anchored window element - displaying' }
+ToMenuItemElement >> popupEvent: anEvent [
 ]
 
-{ #category : #'adding-removing' }
-ToMenuItemElement >> removedFromMenu: aMenu [
-
-	self parentMenu: nil
-]
-
-{ #category : #'parent menu' }
+{ #category : #'t - menu window model' }
 ToMenuItemElement >> rootMenu [
 
-	 ^ parentMenu ifNil: [ self ] ifNotNil: [ :pm | pm rootMenu  ]
+	(self menuListOwner isNil or: [ self menuListOwner isMenuPane ]) ifTrue: [
+		^ self isMenu
+			  ifTrue: [ self ]
+			  ifFalse: [  ] ].
+	^ self menuListOwner rootMenu
+]
+
+{ #category : #'t - menu window model' }
+ToMenuItemElement >> rootMenuDo: aBlock [
+
+	| rm |
+	rm := self rootMenu ifNil: [ ^ self ].
+	aBlock value: rm
 ]

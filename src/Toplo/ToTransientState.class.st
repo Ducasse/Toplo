@@ -1,6 +1,6 @@
 Class {
 	#name : #ToTransientState,
-	#superclass : #ToElementState,
+	#superclass : #ToSimpleState,
 	#instVars : [
 		'skinEvent'
 	],
@@ -13,22 +13,6 @@ ToTransientState class >> skinEvent: aSkinEvent [
 	^ self new
 		  skinEvent: aSkinEvent;
 		  yourself
-]
-
-{ #category : #'look event sending' }
-ToTransientState >> applyOn: anElement [
-
-	skinEvent ifNil: [ Error signal: 'An explicit state must provide its own skin event instance' ].
-	super applyOn: anElement
-]
-
-{ #category : #'look event sending' }
-ToTransientState >> onAppliedOn: anElement [
-
-	super onAppliedOn: anElement.
-	skinEvent isConsumed ifTrue: [ self sourceEvent consume ].
-	skinEvent := nil
-
 ]
 
 { #category : #accessing }

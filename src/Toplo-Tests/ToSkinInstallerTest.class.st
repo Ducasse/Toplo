@@ -7,50 +7,74 @@ Class {
 { #category : #tests }
 ToSkinInstallerTest >> testApplyOn [
 
-	| e |
+	| e isThemeSkin |
 	e := ToElement new.
-	e skinManager setSkinInstaller: ToSkinInstaller new in: e.
+	self
+		should: [ e skinManager forceNewSkinRequested: true in:  e ]
+		raise: Error.
 	" an element must be attached to a space 
 	because installing a skin requires a theme"
-	self should: [ e skinManager applySkinReinstallIn: e ] raise: Error.
-	self assert: e skinManager skinInstaller notNil.
-	space root addChild: e.
-	e skinManager applySkinReinstallIn: e.
-	self assert: e skinManager installedSkin notNil
+	self should: [ e skinManager installNewSkinIn: e ] raise: Error.
+	self assert: e skinManager newSkinRequested.
+	" need to reset the skin to the initial (unknown skin) because 
+	the previous error let the skinManager in an invalid state"
+	e skinManager uninstallSkinIn: e.
+	space deferAndSettle: [
+		space root addChild: e.
+		e skinManager installNewSkinIn: e.
+		isThemeSkin := e skinManager installedSkin isThemeSkin ].
+	self assert: isThemeSkin
 ]
 
 { #category : #tests }
 ToSkinInstallerTest >> testApplyOnWithRawSkin [
 
-	| e |
+	| e styleInstalled newSkinRequested isUnresolvedSkin isThemeSkin styleInstalledAfter |
 	e := ToElementForRawSkinTest new.
 	space toTheme: ToRawTheme new.
-	e skinManager setSkinInstaller: ToSkinInstaller new in: e.
+	self
+		should: [ e skinManager forceNewSkinRequested: true in: e ]
+		raise: ToSpaceNotFoundError.
 	" an element must be attached to a space 
 	because installing a skin requires a theme"
-	self should: [ e skinManager applySkinReinstallIn: e ] raise: Error.
-	self deny: e styleInstalled.
-	self assert: e skinManager skinInstaller notNil.
-	space root addChild: e.
-	e skinManager applySkinReinstallIn: e.
-	self assert: e skinManager installedSkin notNil.
-	self assert: e styleInstalled
+	self should: [ e skinManager installNewSkinIn: e ] raise: ToSpaceNotFoundError.
+	styleInstalled := e styleInstalled.
+	newSkinRequested := e skinManager newSkinRequested.
+	isUnresolvedSkin := e skinManager installedSkin isUnresolvedSkin.
+	self deny: styleInstalled.
+	self assert: newSkinRequested.
+	self assert: isUnresolvedSkin.
+	" need to reset the skin to the initial (unknown skin) because 
+	the previous error let the skinManager in an invalid state"
+	e skinManager uninstallSkinIn: e.
+	space deferAndSettle: [
+		space root addChild: e.
+		e skinManager installNewSkinIn: e.
+		isThemeSkin := e skinManager installedSkin isThemeSkin.
+		styleInstalledAfter := e styleInstalled ].
+	self assert: isThemeSkin.
+	self assert: styleInstalledAfter
 ]
 
 { #category : #tests }
 ToSkinInstallerTest >> testInstallSkinInWithErrorNonAttachedInSpace [
 
-	| e |
+	| e newSkinRequested isThemeSkin |
 	e := ToElement new.
-	self assert: e skinManager skinInstaller isNil.
-	self assert:
-		(e skinManager installedSkin) isNil.
-	e skinManager setSkinInstaller: ToSkinInstaller new in: e.
-	self assert: e skinManager skinInstaller notNil.
-	self assert:
-		(e skinManager installedSkin) isNil.
+	newSkinRequested := e skinManager newSkinRequested.
+	isThemeSkin := e skinManager installedSkin isThemeSkin.
+	self deny: newSkinRequested.
+	self deny: isThemeSkin.
+	self
+		should: [ e skinManager forceNewSkinRequested: true in: e ]
+		raise: Error.
+	self assert: e skinManager newSkinRequested.
+	self deny: e skinManager installedSkin isThemeSkin.
+	" need to reset the skin to the initial (unknown skin) because 
+	the previous error let the skinManager in an invalid state"
+	e skinManager uninstallSkinIn: e.
 	" an element must be attached to a space 
 	because installing a skin requires a theme"
-	self should: [ e lookupTheme ] raise: Error.
-	self should: [ e skinManager skinInstaller applyOn: e ] raise: Error
+	self should: [ e lookupTheme ] raise: ToSpaceNotFoundError.
+	self should: [ e skinManager installNewSkinIn: e ] raise: ToSpaceNotFoundError
 ]

@@ -1,46 +1,35 @@
 Trait {
 	#name : #TToMenuWindowModel,
-	#category : #'Toplo-Widget-Menu-Basic'
+	#category : #'Toplo-Widget-Menu-Window'
 }
 
 { #category : #'t - menu window model' }
 TToMenuWindowModel >> closeWindow [
 
-	^ self explicitRequirement 
+	^ self shouldBeImplemented 
 ]
 
 { #category : #'t - menu window model' }
-TToMenuWindowModel >> isOpened [
+TToMenuWindowModel >> hasInlineWindow [
 
-	^ self explicitRequirement 
-]
-
-{ #category : #'t - menu window model' }
-TToMenuWindowModel >> isSubmenu [
-
-	^ self explicitRequirement 
+	^ self manager hasInlineWindow
 ]
 
 { #category : #'t - menu window model' }
 TToMenuWindowModel >> isTopMenu [
 
-	^ self explicitRequirement 
+	^ self shouldBeImplemented 
 ]
 
 { #category : #'t - menu window model' }
 TToMenuWindowModel >> menuWindow [
 
-	^ self explicitRequirement 
+	^ self shouldBeImplemented 
 ]
 
 { #category : #'t - menu window model' }
-TToMenuWindowModel >> popupEvent: anEvent [
+TToMenuWindowModel >> menuWindowDo: aValuable [
 
-	^ self explicitRequirement 
-]
-
-{ #category : #'t - menu window model' }
-TToMenuWindowModel >> rootMenu [
-
-	^ self explicitRequirement 
+	self menuWindow ifNil: [ ^ self ].
+	aValuable value: self menuWindow
 ]

@@ -23,6 +23,18 @@ ToSelectionModel >> allIndexes [
 	^ (1 to: self itemCount) asArray
 ]
 
+{ #category : #enumerating }
+ToSelectionModel >> allIndexesDo: aValuable [
+
+	1 to: self itemCount do: [ :idx | aValuable value: idx ]
+]
+
+{ #category : #'api - testing' }
+ToSelectionModel >> containsAnyOfInterval: anInterval [
+
+	^ underlyingModel containsAnyOfInterval: anInterval
+]
+
 { #category : #'api - testing' }
 ToSelectionModel >> containsIndex: anIndex [
 
@@ -32,9 +44,7 @@ ToSelectionModel >> containsIndex: anIndex [
 { #category : #copying }
 ToSelectionModel >> copySelectionFrom: anotherSelectionModel [
 
-	anotherSelectionModel ifNil: [
-		underlyingModel := self newUnderlyingModel.
-		^ self ].
+	" just copy the root selection "
 	underlyingModel := anotherSelectionModel underlyingModel copy
 ]
 
@@ -72,22 +82,10 @@ ToSelectionModel >> deselectedIndexes [
 	^ self allIndexes difference: self selectedIndexes
 ]
 
-{ #category : #copying }
-ToSelectionModel >> duplicate [
-
-	^ self copy
-]
-
 { #category : #accessing }
 ToSelectionModel >> firstIndex [
 
 	^ underlyingModel firstIndex
-]
-
-{ #category : #testing }
-ToSelectionModel >> hasUnselectableInInterval: anInterval [
-
-	^ false
 ]
 
 { #category : #comparing }
@@ -100,14 +98,28 @@ ToSelectionModel >> hash [
 ToSelectionModel >> ifEmpty: aBlock [
 
 	self isEmpty ifFalse: [ ^ self ].
-	aBlock value
+	^ aBlock value
+]
+
+{ #category : #testing }
+ToSelectionModel >> ifEmpty: aBlock ifNotEmpty: notEmptyBlock [
+
+	self isEmpty ifFalse: [ ^ notEmptyBlock cull: self ].
+	^ aBlock value
 ]
 
 { #category : #testing }
 ToSelectionModel >> ifNotEmpty: aBlock [
 
 	self isEmpty ifTrue: [ ^ self ].
-	aBlock cull: self
+	^ aBlock cull: self
+]
+
+{ #category : #testing }
+ToSelectionModel >> ifNotEmpty: notEmptyBlock ifEmpty: aBlock [ 
+
+	self isEmpty ifFalse: [ ^ notEmptyBlock cull: self ].
+	^ aBlock value
 ]
 
 { #category : #initialization }
@@ -115,18 +127,6 @@ ToSelectionModel >> initialize [
 
 	super initialize.
 	underlyingModel := self newUnderlyingModel 
-]
-
-{ #category : #private }
-ToSelectionModel >> intervalFirstFromIndex: anIndex [
-
-	^ anIndex
-]
-
-{ #category : #private }
-ToSelectionModel >> intervalLastFromIndex: anIndex [
-
-	^ anIndex
 ]
 
 { #category : #testing }
@@ -154,9 +154,21 @@ ToSelectionModel >> isNotEmpty [
 ]
 
 { #category : #testing }
+ToSelectionModel >> isSelectableIndex: anIndex [
+
+	^ (self isUnselectableIndex: anIndex) not
+]
+
+{ #category : #testing }
 ToSelectionModel >> isUnselectableIndex: anIndex [
 
 	^ false
+]
+
+{ #category : #testing }
+ToSelectionModel >> isVisibleIndex: anIndex [
+
+	^ (self isHiddenIndex: anIndex) not
 ]
 
 { #category : #accessing }
@@ -186,6 +198,18 @@ ToSelectionModel >> lastIndex [
 	^ underlyingModel lastIndex
 ]
 
+{ #category : #accessing }
+ToSelectionModel >> makeDisabledUnselectable [
+
+	^ false
+]
+
+{ #category : #accessing }
+ToSelectionModel >> makeDisabledUnselectable: aBoolean [
+
+	"make nothing for the general case"
+]
+
 { #category : #initialization }
 ToSelectionModel >> newUnderlyingModel [ 
 
@@ -208,8 +232,55 @@ ToSelectionModel >> on: anElement [
 { #category : #copying }
 ToSelectionModel >> postCopy [
 
+	| newUnderlyingModel |
 	super postCopy.
-	underlyingModel := underlyingModel copy
+	newUnderlyingModel := underlyingModel copy.
+	underlyingModel := newUnderlyingModel
+]
+
+{ #category : #updating }
+ToSelectionModel >> prev_shift: aGap from: aStartIndex [
+	"I update the selection after adding or removing items from/in a listElement.
+	The gap is < 0 for items removal.
+	In that case, the selection interval are shift from startIndex toward the start of the list.
+	After the shift, the startIndex IS NOT present in the selection.
+	The gap is > 0 for adding.
+	In that case, the selection intervals are shift from startIndex toward the end of list.
+	After the shift, the startIndex IS present in the selection."
+
+	| prevIntervals lastIndex minLastIndex |
+	"'ToSelectionModel>> shift: ' trace. aGap trace. ' from: ' trace. aStartIndex traceCr."
+	aGap isZero ifTrue: [ ^ self ].
+	self isEmpty ifTrue: [ ^ self ].
+	"'ToSelectionModel>>shift: itemsCount ' trace. self itemCount traceCr."
+	lastIndex := underlyingModel lastIndex.
+
+	" 1 - keep selected intervals to reselect them accordingly at 3 "
+	prevIntervals := self selectedIndexesIntervals.
+
+	" 2 - deselect according to start index and gap "
+	underlyingModel
+		removeIntervalFromIndex: aStartIndex
+		toIndex: lastIndex + 1.
+
+	"prevIntervals traceCr."
+	" 3 - reselect "
+	" in case of items adding, include the startIndex "
+	minLastIndex := aGap < 0
+		                ifTrue: [ aStartIndex ]
+		                ifFalse: [ aStartIndex - 1 ].
+	prevIntervals
+		select: [ :int | int last > minLastIndex ]
+		thenDo: [ :int |
+				| first last |
+				first := (int first max: aStartIndex) + aGap max: 1.
+				last := int last + aGap max: 0.
+				underlyingModel selectIndex: first to: last ].
+
+	" 4 - remove selection outside the valid selection interval (1 to: self itemCount) "
+	lastIndex := underlyingModel lastIndex.
+	lastIndex > self itemCount ifFalse: [ ^ self ].
+	underlyingModel deselectIndex: self itemCount + 1 to: lastIndex
 ]
 
 { #category : #accessing }
@@ -217,6 +288,14 @@ ToSelectionModel >> previousSelectableIndexStartingAt: anIndex [
 
 	anIndex > 0 ifTrue: [ ^ anIndex ].
 	^ 0
+]
+
+{ #category : #dependencies }
+ToSelectionModel >> release [ 
+
+	super release.
+	underlyingModel release.
+	underlyingModel := nil
 ]
 
 { #category : #updating }
@@ -234,7 +313,7 @@ ToSelectionModel >> selectAll [
 { #category : #updating }
 ToSelectionModel >> selectIndex: anIndex [
 
-	underlyingModel selectIndex: anIndex
+	self selectOneMoreIndex: anIndex
 ]
 
 { #category : #updating }
@@ -250,7 +329,13 @@ ToSelectionModel >> selectIndex: aFirstIndex to: aSecondIndex [
 ToSelectionModel >> selectIndexes: anArray [
 
 	anArray ifEmpty: [ ^ self ].
-	anArray do: [ :idx | self selectIndex: idx ]
+	anArray do: [ :idx | self selectOneMoreIndex: idx ]
+]
+
+{ #category : #updating }
+ToSelectionModel >> selectOneMoreIndex: anIndex [
+
+	underlyingModel selectOneMoreIndex: anIndex
 ]
 
 { #category : #accessing }
@@ -294,37 +379,32 @@ ToSelectionModel >> selectedIndexesIntervalsDo: aBlock [
 
 { #category : #updating }
 ToSelectionModel >> shift: aGap from: aStartIndex [
+	"I update the selection after adding or removing items from/in a listElement.
+	The gap is < 0 for items removal.
+	In that case, the selection interval are shift from startIndex toward the start of the list.
+	After the shift, the startIndex IS NOT present in the selection.
+	The gap is > 0 for adding.
+	In that case, the selection intervals are shift from startIndex toward the end of list.
+	After the shift, the startIndex IS present in the selection."
 
-	| from to prevIntervals high |
+	| lastIndex indexes |
 	aGap isZero ifTrue: [ ^ self ].
 	self isEmpty ifTrue: [ ^ self ].
 
-	" 1 - keep selected intervals to reselect them accordingly at 2"
-	prevIntervals := self selectedIndexesIntervals.
-	high := underlyingModel lastIndex.
+	lastIndex := underlyingModel lastIndex.
 
-	" deselect according to start index and gap "
-	aGap <= 0
-		ifTrue: [
-			from := aStartIndex + aGap.
-			to := aStartIndex.
-			(high >= 0 and: [ from <= high ]) ifTrue: [
-				underlyingModel removeIntervalFromIndex: from + 1 toIndex: high ] ]
-		ifFalse: [
-			from := aStartIndex.
-			to := aStartIndex + aGap min: high.
+	indexes := Array streamContents: [ :stream |
+			           self selectedIndexesDo: [ :idx |
+					           idx >= aStartIndex ifTrue: [
+							           | newIdx |
+							           newIdx := (idx max: aStartIndex) + aGap.
+							           newIdx >= aStartIndex ifTrue: [
+								           stream nextPut: newIdx ] ] ] ].
+	underlyingModel
+		removeIntervalFromIndex: aStartIndex
+		toIndex: lastIndex.
 
-			from <= high ifTrue: [
-				underlyingModel removeIntervalFromIndex: from toIndex: high ] ].
-
-	" 2 - reselect "
-	prevIntervals do: [ :interval |
-		| first last |
-		(interval last >= aStartIndex and: [ interval last + aGap > 0 ])
-			ifTrue: [
-				first := interval first max: aStartIndex.
-				last := interval last.
-				underlyingModel selectIndex: first + aGap to: last + aGap ] ]
+	underlyingModel selectIndexes: indexes
 ]
 
 { #category : #accessing }
@@ -349,10 +429,11 @@ ToSelectionModel >> sideIdx: aGap startingAt: anIndex [
 ]
 
 { #category : #updating }
-ToSelectionModel >> transferSelectionFromIndex: anIndex toIndex: targetIndex in: anotherPrimarySelectionModel [ 
+ToSelectionModel >> transferSelectionFromIndex: anIndex toIndex: targetIndex in: anotherPrimarySelectionModel [
 
 	(self containsIndex: anIndex)
-		ifTrue: [ anotherPrimarySelectionModel selectIndex: targetIndex ]
+		ifTrue: [
+		anotherPrimarySelectionModel selectOneMoreIndex: targetIndex ]
 		ifFalse: [ anotherPrimarySelectionModel deselectIndex: targetIndex ]
 ]
 

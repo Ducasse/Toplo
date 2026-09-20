@@ -1,6 +1,6 @@
 Class {
 	#name : #ToNeighboringSelection,
-	#superclass : #ToSelectionGroup,
+	#superclass : #ToSelectionWithElement,
 	#instVars : [
 		'nodes'
 	],
@@ -8,24 +8,18 @@ Class {
 }
 
 { #category : #comparing }
-ToNeighboringSelection >> = other [
+ToNeighboringSelection >> equivalentTo: other [
 
-	self class = other class ifFalse: [ ^ false ].
-	nodes size = other nodes size ifFalse: [ ^ false ].
-	1 to: nodes size do: [ :index |
-		(nodes at: index) = (other nodes at: index) ifFalse: [ ^ false ] ].
-
+	(super equivalentTo: other) ifFalse: [ ^ false ].
+	nodes size = other nodeContainers size ifFalse: [ ^ false ].
+	nodes
+		with: other nodeContainers
+		do: [ :c1 :c2 | (c1 equals: c2) ifFalse: [ ^ false ] ].
 	^ true
 ]
 
-{ #category : #comparing }
-ToNeighboringSelection >> hash [
-
-	^ super hash bitXor: nodes hash
-]
-
 { #category : #accessing }
-ToNeighboringSelection >> nodes [
+ToNeighboringSelection >> nodeContainers [
 
 	^ nodes
 ]
@@ -34,4 +28,12 @@ ToNeighboringSelection >> nodes [
 ToNeighboringSelection >> nodes: anObject [
 
 	nodes := anObject
+]
+
+{ #category : #'private - selection updating' }
+ToNeighboringSelection >> stream: aStream withNewSelectionElementIn: aListElement option: aSelectionOption [
+
+	aStream nextPut: (aSelectionOption
+			 newSelectionElementIn: aListElement
+			 forNodeContainers: self nodeContainers)
 ]

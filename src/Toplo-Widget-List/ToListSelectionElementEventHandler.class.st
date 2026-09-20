@@ -1,56 +1,28 @@
 Class {
 	#name : #ToListSelectionElementEventHandler,
 	#superclass : #BlCustomEventHandler,
-	#instVars : [
-		'selectionGroupHolder'
-	],
 	#category : #'Toplo-Widget-List-Selection-Element'
 }
-
-{ #category : #'element handlers' }
-ToListSelectionElementEventHandler >> boundsHasChangedDuringScrollingEvent: anEvent [
-
-	self refreshSelectionFromEvent: anEvent
-]
 
 { #category : #'selection managing' }
 ToListSelectionElementEventHandler >> differUpdateSelectionFrom: target [
 
 ]
 
-{ #category : #'element handlers' }
-ToListSelectionElementEventHandler >> elementExtentChangedEvent: anEvent [
-
-	self refreshSelectionFromEvent: anEvent
-]
-
-{ #category : #'element handlers' }
-ToListSelectionElementEventHandler >> elementScrolledEvent: anEvent [
-
-	self refreshSelectionFromEvent: anEvent
-]
-
 { #category : #'api - accessing' }
 ToListSelectionElementEventHandler >> eventsToHandle [
 
-	^ {
-		  BlBoundsHasChangedDuringScrollingEvent.
-		  BlElementExtentChangedEvent.
-		  BlElementScrolledEvent }
+	^ {  }
 ]
 
 { #category : #'selection managing' }
-ToListSelectionElementEventHandler >> refreshSelectionFromEvent: anEvent [
+ToListSelectionElementEventHandler >> updateNodesIn: aListElement [
 
-	| target |
-	target := anEvent currentTarget.
-	selectionGroupHolder refreshSelectionIn: target
-]
-
-{ #category : #accessing }
-ToListSelectionElementEventHandler >> selectionGroupHolder: aSelectionGroupHolder [
-
-	selectionGroupHolder := aSelectionGroupHolder
+	aListElement nodeContainersDo: [ :container |
+		| holder |
+		holder := container holder.
+		holder shouldIgnore ifFalse: [
+			holder initializeNodeSelections ] ].
 ]
 
 { #category : #'selection managing' }
@@ -60,12 +32,10 @@ ToListSelectionElementEventHandler >> updateSelectionFromEvent: anEvent [
 
 	| target |
 	target := anEvent currentTarget.
-	anEvent touchedIndexes ifEmpty: [
-		self refreshSelectionFromEvent: anEvent.
-		^ self ].
 
 	target isAttachedToSceneGraph ifFalse: [
-		self differUpdateSelectionFrom: target.
-		^ self ].
-	selectionGroupHolder updateSelectionIn: target
+			self differUpdateSelectionFrom: target.
+			^ self ].
+
+	anEvent selectionOption updateRepresentationIn: target
 ]

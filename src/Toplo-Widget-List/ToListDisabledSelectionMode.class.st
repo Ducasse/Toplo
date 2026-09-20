@@ -4,26 +4,14 @@ Class {
 	#category : #'Toplo-Widget-List-Selection-Mode'
 }
 
-{ #category : #initialization }
-ToListDisabledSelectionMode >> listEventHandlerClass [
-
-	^ ToListDisabledSelectionElementEventHandler 
-]
-
 { #category : #'instance creation' }
-ToListDisabledSelectionMode >> newListEventHandler [
+ToListDisabledSelectionMode >> newSelectionChangedEventHandler [
 
 	^ ToListDisabledSelectionElementEventHandler new
 ]
 
-{ #category : #initialization }
+{ #category : #'instance creation' }
 ToListDisabledSelectionMode >> selectionChangedEventClass [ 
 
 	^ ToListDisabledSelectionChangedEvent
-]
-
-{ #category : #accessing }
-ToListDisabledSelectionMode >> uniqueId [ 
-
-	^ #disabled
 ]

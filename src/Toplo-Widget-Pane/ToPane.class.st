@@ -1,9 +1,13 @@
+"
+I'm a pane that can contains other elements. 
+I can have dividers in between my elements.
+"
 Class {
 	#name : #ToPane,
 	#superclass : #ToElement,
-	#traits : 'TToOrientable + TToPasteUpPane + TToElementWithPlaceholder',
-	#classTraits : 'TToOrientable classTrait + TToPasteUpPane classTrait + TToElementWithPlaceholder classTrait',
-	#category : #'Toplo-Widget-Pane'
+	#traits : 'TToOrientable + TToDirectional + TToPasteUpPane + TToElementWithPlaceholder',
+	#classTraits : 'TToOrientable classTrait + TToDirectional classTrait + TToPasteUpPane classTrait + TToElementWithPlaceholder classTrait',
+	#category : #'Toplo-Widget-Pane-Core'
 }
 
 { #category : #factory }
@@ -30,18 +34,22 @@ ToPane class >> vertical [
 ToPane >> addDividerBetween: aFirstElement and: aSecondElement [
 
 	| divider |
-	divider := ToDivider between: aFirstElement and: aSecondElement in: self.
-	self addChild: divider
+	divider := ToPaneDivider between: aFirstElement and: aSecondElement.
+	self addChild: divider.
+	^ divider 
 ]
 
 { #category : #dividers }
 ToPane >> addDividers [
 
-	| lastIdx |
+	| lastIdx dividers |
+	dividers := OrderedCollection new.
 	lastIdx := self children size.
 	self children withIndexDo: [ :child :idx |
-		idx < lastIdx ifTrue: [
-			self addDividerBetween: child and: (self children at: idx + 1) ] ]
+			idx < lastIdx ifTrue: [
+					dividers add:
+						(self addDividerBetween: child and: (self children at: idx + 1)) ] ].
+	^ dividers
 ]
 
 { #category : #initialization }
@@ -53,28 +61,17 @@ ToPane >> defaultLayout [
 { #category : #dividers }
 ToPane >> dividers [
 
-	^ self children select: [ :child | child isKindOf: ToDivider ]
-]
-
-{ #category : #initialization }
-ToPane >> initialize [ 
-
-	super initialize
+	^ self children select: [ :child | child isKindOf: ToPaneDivider ]
 ]
 
 { #category : #skin }
-ToPane >> installRawStyle [ 
+ToPane >> installRawStyle [
 
 	super installRawStyle.
-	self background: (self valueOfTokenNamed: #'background-color')
-]
-
-{ #category : #'t - orientable - accessing' }
-ToPane >> layoutStrategy [
-
-	^ self layout
-
-
+	self outskirts: BlOutskirts outside.
+	self background: (self valueOfTokenNamed: #'background-color').
+	self geometry: (BlRoundedRectangleGeometry cornerRadius:
+			 (self valueOfTokenNamed: #'border-radius'))
 ]
 
 { #category : #layout }

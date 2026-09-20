@@ -5,7 +5,7 @@ Class {
 }
 
 { #category : #'instance creation' }
-ToListSecondarySelectionElement >> newRawSkin [ 
+ToListSecondarySelectionElement >> newRawSkin [
 
 	^ ToListSecondarySelectionElementSkin new
 ]

@@ -6,7 +6,7 @@ Class {
 		'maxHiddenIntervals',
 		'maxDisabledIntervals'
 	],
-	#category : #'Toplo-Examples'
+	#category : #'Toplo-Examples-Stressers'
 }
 
 { #category : #running }
@@ -22,7 +22,7 @@ ToListElementStresserWithAdditionalSelecters class >> run [
 ToListElementStresserWithAdditionalSelecters class >> runInSDL [
 
 	<script>
-	self new runInHost: BlOSWindowSDL2Host new
+	self new runInHost: BlOSWindowSDL2Host default
 ]
 
 { #category : #actions }
@@ -151,8 +151,8 @@ ToListElementStresserWithAdditionalSelecters >> initialize [
 ToListElementStresserWithAdditionalSelecters >> newListElement [
 
 	| l |
-	l := ToListElement new
-		     nodeBuilder: [ :node :dataItem :holder  |
+	l := ToListElement infinite
+		     nodeBuilder: [ :node :dataItem :holder |
 			     | lab |
 			     lab := ToLabel text: dataItem.
 			     node addChild: lab.
@@ -161,16 +161,7 @@ ToListElementStresserWithAdditionalSelecters >> newListElement [
 			     holder isDisabled ifTrue: [
 					     node background: (Color veryLightGray alpha: 0.5) ] ];
 		     yourself.
-	"
-	l newDisabledSelectionMode onInstalledIn: l.
-	l newUnselectableSelectionMode onInstalledIn: l.
-	l withHiddenSelecter.
-	"
-	l
-		withHiddenSelecter;
-		withUnselectableSelecter;
-		withDisabledSelecter.
-
+		
 	^ l
 ]
 
@@ -187,20 +178,17 @@ ToListElementStresserWithAdditionalSelecters >> selectionResultsTextOn: aListEle
 
 	| nb t |
 	t := super selectionResultsTextOn: aListElement.
-	nb := aListElement unselectableSelectionModel underlyingModel
-		      intervals size.
+	nb := aListElement unselectableSelectionModel selectedIndexesIntervals size.
 	maxUnselectableIntervals := nb max: maxUnselectableIntervals.
 	t := t , ' < unselectable ' , nb asString , '/'
 	  , maxUnselectableIntervals asString , ' >'.
 	
-	nb := aListElement hiddenSelectionModel underlyingModel
-		      intervals size.
+	nb := aListElement hiddenSelectionModel selectedIndexesIntervals size.
 	maxHiddenIntervals := nb max: maxHiddenIntervals.
 	t := t , ' < hidden ' , nb asString , '/'
 	  , maxHiddenIntervals asString , ' >'.
 	
-	nb := aListElement disabledSelectionModel underlyingModel
-		      intervals size.
+	nb := aListElement disabledSelectionModel selectedIndexesIntervals size.
 	maxDisabledIntervals := nb max: maxDisabledIntervals.
 	t := t , ' < disabled ' , nb asString , '/'
 	  , maxDisabledIntervals asString , ' >'.

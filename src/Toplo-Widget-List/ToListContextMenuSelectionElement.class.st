@@ -11,9 +11,11 @@ Class {
 ToListContextMenuSelectionElement >> initialize [
 
 	super initialize.
+	self outskirts: BlOutskirts outside.
 	inner := ToElement new
 		         id: #inner;
 		         yourself.
+	inner outskirts: BlOutskirts inside.
 	inner matchParent.
 	self addChild: inner
 ]
@@ -28,16 +30,4 @@ ToListContextMenuSelectionElement >> inner [
 ToListContextMenuSelectionElement >> newRawSkin [ 
 
 	^ ToListContextMenuSelectionElementSkin new
-]
-
-{ #category : #private }
-ToListContextMenuSelectionElement >> positionFrom: aPoint in: aListElement [
-
-	^ aPoint - (aListElement padding left / 2 @ 0)
-]
-
-{ #category : #private }
-ToListContextMenuSelectionElement >> sizeFrom: aPoint in: aListElement [
-
-	^ aPoint + ((aListElement padding left / 2) + (aListElement padding right / 2) @ 0)
 ]

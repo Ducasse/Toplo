@@ -3,99 +3,100 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'nextStates',
-		'previousInstallState',
-		'intrinsicStateIndex'
+		'intrinsicState',
+		'installState'
 	],
 	#category : #'Toplo-Core-States'
 }
 
-{ #category : #hook }
-ToSkinStateQueue >> applyEnqueuedStatesIn: anElement [
+{ #category : #'state application' }
+ToSkinStateQueue >> applyEnqueuedStatesFor: anElement [
 
-	| nextInQueue atLeastOne |
-	atLeastOne := false.
-	[ (nextInQueue := self nextStates nextOrNil) isNotNil ] whileTrue: [
-		atLeastOne := true.
-		nextInQueue applyOn: anElement ].
-	atLeastOne ifTrue: [
-		anElement dispatchEvent: ToSkinStateQueueAppliedEvent new ]
+	nextStates do: [ :nextInQueue | 
+		nextInQueue applyOn: anElement fromQueue: self ].
+	self resetStates 
 ]
 
-{ #category : #hook }
-ToSkinStateQueue >> applyOn: anElement [
+{ #category : #'instinsic state accessing' }
+ToSkinStateQueue >> checkedSkinEvent: aCheckedSkinEvent in: anElement [
 
-	self
-		deprecated: 'Use applyEnqueuedStatesIn: instead'
-		transformWith: '`@receiver applyOn: `@argument'
-			-> '`@receiver applyEnqueuedStatesIn: `@argument'.
+	intrinsicState checkedSkinEvent: aCheckedSkinEvent.
+	self enqueueIntrinsicStateFor: anElement
+]
 
-	self applyEnqueuedStatesIn: anElement
+{ #category : #'instinsic state accessing' }
+ToSkinStateQueue >> enabledSkinEvent: aSkinEvent in: anElement [
+
+	intrinsicState enabledSkinEvent: aSkinEvent.
+	self enqueueIntrinsicStateFor: anElement
 ]
 
 { #category : #adding }
-ToSkinStateQueue >> enqueueInstallStateForElement: anElement [
-	" install state required  "
+ToSkinStateQueue >> enqueueInstallStateFor: anElement [
 
-	previousInstallState := ToInstallState new.
-	self enqueueState: previousInstallState for: anElement.
+	installState ifNotNil: [ ^ ToInstallStateAlreadyQueuedError signal ].
+	installState := ToInstallState instance.
+	intrinsicState enabledSkinEvent: anElement newEnabledSkinEvent.
+	nextStates add: installState.
+	self enqueueIntrinsicStateFor: anElement
+]
 
-	" restitute the intrasic states (as enablement, check)
-	enablement state must always be the last one to be enqueued "
-	self intrinsicStatesDo: [ :state |
-		self enqueueState: state for: anElement ].
-	self
-		enqueueState: (ToEnablementState new enabled: anElement isEnabled)
-		for: anElement.
+{ #category : #adding }
+ToSkinStateQueue >> enqueueIntrinsicStateFor: anElement [
+	" if an install state is not applied then don't enqueue it now,
+	it will be enqueued properly on the next install state enqueuing "
 
-	
+	intrinsicState enqueued ifTrue: [ ^ self ].
+	installState ifNil: [ ^ self ].
+	self enqueueState: intrinsicState for: anElement.
+	intrinsicState enqueued: true
 ]
 
 { #category : #adding }
 ToSkinStateQueue >> enqueueState: aState for: anElement [
-	" all states kinds are enqueued here "
 
-	self nextStates nextPut: aState.
-	anElement spaceDo: [ :sp |
-		sp needSkinStateApplicationPass: true ]
+	nextStates add: aState.
+	anElement spaceDo: [ :sp | sp requestSkinStateApplicationPass ]
 ]
 
 { #category : #adding }
-ToSkinStateQueue >> enqueueUninstallStateForElement: anElement [
+ToSkinStateQueue >> enqueueTransientState: aState for: anElement [
+	" if an install state is not applied then just ignore a transient state "
+
+	installState ifNil: [ ^ self ].
+	self enqueueState: aState for: anElement
+]
+
+{ #category : #adding }
+ToSkinStateQueue >> enqueueUninstallStateFor: anElement [
 	" uninstall state required  "
 
-	" have to ignore previous look events to avoid to apply them to the new skin"
-	self nextStates flush.
-	previousInstallState := nil.
+	installState ifNil: [ ^ ToInstallStateNotQueuedError signal ].
+	"self applyEnqueuedStatesFor: anElement."
+	installState := nil.
+	self resetStates.
+	self resetIntrinsicState.
 	" store the uninstall state "
-	self enqueueState: ToUninstallState new for: anElement
+	self enqueueState: ToUninstallState instance for: anElement.
+	" do not wait the next pulse to ensure the uninstallation is done here.
+	In case of theme switch, this must be done here to ensure that selection 
+	in list are correctly updated according the new theme"
+	self applyEnqueuedStatesFor: anElement
 ]
 
-{ #category : #hook }
-ToSkinStateQueue >> flushStates: aBlock [
+{ #category : #'instinsic state accessing' }
+ToSkinStateQueue >> focusedSkinEvent: aSkinEvent in: anElement [
 
-	self nextStates flush: aBlock
-]
-
-{ #category : #accessing }
-ToSkinStateQueue >> hasInstallStateEnqueued [
-
-	^ previousInstallState notNil
+	intrinsicState focusedSkinEvent: aSkinEvent.
+	self enqueueIntrinsicStateFor: anElement
 ]
 
 { #category : #initialization }
-ToSkinStateQueue >> initialize [ 
+ToSkinStateQueue >> initialize [
 
 	super initialize.
-	nextStates := WaitfreeQueue new.
-	" Use an ordered dictionary for intrinsicStateIndex to ensure that an 
-	EnableState is always the last state "
-	intrinsicStateIndex := OrderedIdentityDictionary new
-]
-
-{ #category : #'intrinsic states' }
-ToSkinStateQueue >> intrinsicStatesDo: aBlock [
-
-	intrinsicStateIndex valuesDo: aBlock
+	nextStates := OrderedCollection new.
+	intrinsicState := ToIntrinsicState new
 ]
 
 { #category : #accessing }
@@ -104,14 +105,21 @@ ToSkinStateQueue >> nextStates [
 	^ nextStates
 ]
 
-{ #category : #accessing }
-ToSkinStateQueue >> nextStates: anObject [
+{ #category : #'instinsic state accessing' }
+ToSkinStateQueue >> resetIntrinsicState [ 
 
-	nextStates := anObject
+	intrinsicState reset
 ]
 
-{ #category : #'intrinsic states' }
-ToSkinStateQueue >> onIntrinsicStateEnqueueRequested: aState [
+{ #category : #accessing }
+ToSkinStateQueue >> resetStates [
 
-	intrinsicStateIndex at: aState class put: aState
+	nextStates reset
+]
+
+{ #category : #'instinsic state accessing' }
+ToSkinStateQueue >> selectedSkinEvent: aSelectionEvent in: anElement [
+
+	intrinsicState selectedSkinEvent: aSelectionEvent.
+	self enqueueIntrinsicStateFor: anElement
 ]

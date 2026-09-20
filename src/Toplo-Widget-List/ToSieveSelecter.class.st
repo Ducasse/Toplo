@@ -5,7 +5,15 @@ Class {
 }
 
 { #category : #initialization }
-ToSieveSelecter >> initializeCommandApplier [
+ToSieveSelecter >> defaultCommandApplicationStrategy [
 
-	commandApplierEventHandler := ToDirectCommandApplierEventHandler new
+	" normally not sent "
+	^ nil
+]
+
+{ #category : #initialization }
+ToSieveSelecter >> initializeCommandApplicationStrategy [
+
+	" my command application strategy is the one of my list element primary selecter.
+	See ToPrimarySelecter>>newSieveSelecter "
 ]

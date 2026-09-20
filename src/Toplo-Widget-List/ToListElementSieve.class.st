@@ -1,56 +1,36 @@
+"
+I manage the possibility to keep a selection while filtering it. 
+For example in a method list, the user selects some the initialize methods, then filter the list based on the init pattern, he/she will see the previously selected initialize methods. 
+
+I'm using `ToObservableCollectionFilterApplier`.  
+"
 Class {
 	#name : #ToListElementSieve,
 	#superclass : #Object,
-	#traits : 'TBlEventTarget + TToAuthorisationRequestTarget',
-	#classTraits : 'TBlEventTarget classTrait + TToAuthorisationRequestTarget classTrait',
+	#traits : 'TBlEventTarget + TToRequestTarget',
+	#classTraits : 'TBlEventTarget classTrait + TToRequestTarget classTrait',
 	#instVars : [
-		'queryRunner',
 		'originalData',
 		'currentData',
-		'selectionModel',
 		'selecter',
-		'selectionHandler',
-		'sharedHandler',
 		'eventDispatcher',
 		'originalIndexMap',
-		'sieveEventHandler',
-		'commandEventHandler'
+		'dataSourceHandler',
+		'sieveHandler',
+		'listElementHandler',
+		'filterApplier'
 	],
 	#category : #'Toplo-Widget-List-Sieve'
 }
+
+{ #category : #'private - commands' }
+ToListElementSieve >> addedDataSourceCommand: aCommand [
+]
 
 { #category : #accessing }
 ToListElementSieve >> currentData [
 
 	^ currentData 
-]
-
-{ #category : #enumerating }
-ToListElementSieve >> currentDataWithLocalAndOriginalIndexDo: aBlock [
-	" aBlock takes a data, its local index and its original index "
-
-	self currentData withIndexDo: [ :d :localIndex |
-		| originalIndex |
-		originalIndex := originalIndexMap at: d.
-		aBlock value: d value: localIndex value: originalIndex ]
-]
-
-{ #category : #enumerating }
-ToListElementSieve >> currentDataWithOriginalIndexDo: aBlock [
-	" aBlock takes a data an its index as arguments "
-
-	self currentData do: [ :d |
-		| idx |
-		idx := originalIndexMap at: d.
-		aBlock value: d value: idx ]
-]
-
-{ #category : #accessing }
-ToListElementSieve >> dataFilter: aValuable [
-	" filter takes a data and a pattern as argument "
-
-	queryRunner dataFilter: [ :item :pattern |
-		aValuable value: item value: pattern ]
 ]
 
 { #category : #'event management accessing' }
@@ -61,6 +41,14 @@ ToListElementSieve >> eventDispatcher [
 	^ eventDispatcher
 ]
 
+{ #category : #accessing }
+ToListElementSieve >> filter: aValuable [
+	" filter takes a data and a pattern as argument "
+
+	filterApplier filter: [ :item :pattern |
+		aValuable value: item unwrappedDataItem value: pattern ]
+]
+
 { #category : #initialization }
 ToListElementSieve >> initialize [ 
 
@@ -68,10 +56,69 @@ ToListElementSieve >> initialize [
 	eventDispatcher := BlDirectEventDispatcher on: self
 ]
 
+{ #category : #'api - hooks' }
+ToListElementSieve >> installFilterApplierIn: aListElement [
+	" install the filter apply to tigger currentData update from the selected indexes (by the filter) "
+
+	originalData := aListElement dataSource newMirror.
+	currentData := originalData.
+	filterApplier onInstalledIn: originalData.
+	" When a query has occured (because the query pattern has changed), update the current data accordingly.
+	Because currentData can be a mirror on the data source, updating its contents leads to a layout of the 
+	list element.
+	The handler ask the list to process the data source command and to update the selection model.
+	A postponed action is used to ensure that the action occurs after the layout is done in the listElement "
+	originalData
+		addEventHandlerOn: ToObservableCollectionFilterApplierEvent
+		do: [ :event |
+				self observableCollectionFilterAppliedEvent: event.
+				aListElement postponeAction: [ :l | l onSievedWith: self ] ]
+]
+
 { #category : #accessing }
 ToListElementSieve >> isInstalled [
 
 	^ originalData notNil
+]
+
+{ #category : #private }
+ToListElementSieve >> itemCount [ 
+
+	^ currentData size
+]
+
+{ #category : #initialization }
+ToListElementSieve >> newFilterApplier [
+
+	^ ToObservableCollectionFilterApplier new
+]
+
+{ #category : #'instance creation' }
+ToListElementSieve >> newSievedListDataSourceEventHandler [
+
+	^ ToSievedListDataSourceEventHandler new
+]
+
+{ #category : #'instance creation' }
+ToListElementSieve >> newSievedListElementEventHandler [
+
+	^ ToSievedListElementEventHandler new
+]
+
+{ #category : #'instance creation' }
+ToListElementSieve >> newTextField [ 
+
+	^ ToTextField newForSieve: self
+]
+
+{ #category : #private }
+ToListElementSieve >> observableCollectionFilterAppliedEvent: anEvent [
+
+	currentData := anEvent pattern
+		               ifEmpty: [ originalData ]
+		               ifNotEmpty: [
+		               anEvent selectedIndexes collect: [ :idx |
+			               originalData at: idx ] ]
 ]
 
 { #category : #'api - hooks' }
@@ -81,57 +128,47 @@ ToListElementSieve >> onInstalledIn: aListElement [
 	originalData ifNotNil: [
 		^ (BlImmutableObjectChangeError object: self) signal ].
 	originalIndexMap := IdentityDictionary new.
-	selectionModel := aListElement selectionModel duplicate.
 
-	originalData := aListElement dataAccessor newMirror.
-	queryRunner := ToObservableCollectionFilter new.
-	queryRunner onInstalledIn: originalData.
-
-	" initialization of the current result with the current pattern "
-	self updateCurrentData.
-	sharedHandler := BlSharedEventDistributor new.
-	sharedHandler shareEvents:
-		{ ToObservableCollectionFilterResultEvent }.
-	originalData addEventHandler: sharedHandler.
-	aListElement addEventHandler: sharedHandler.
-
-	selectionHandler := ToSievedListElementEventHandler new.
-	selectionHandler sieve: self.
-	aListElement addEventHandler: selectionHandler.
-
-	sieveEventHandler := ToSieveEventHandler new
-		                     listElement: aListElement;
-		                     yourself.
-	selecter := ToSieveSelecter new
-		            selectionModel: self selectionModel;
-		            selectionChangedEventClass:
-			            ToListPrimarySelectionChangedEvent;
-		            yourself.
-	selecter
-		enabled: true;
-		multiple: aListElement isMultipleSelection.
+	selecter := aListElement selecter newSieveSelecter.
 	selecter onInstalledIn: self.
 
-	self addEventHandler: sieveEventHandler
+	filterApplier := self newFilterApplier.
+	self installFilterApplierIn: aListElement.
+
+	listElementHandler := self newSievedListElementEventHandler.
+	listElementHandler sieve: self.
+	aListElement addEventHandler: listElementHandler.
+
+	dataSourceHandler := self newSievedListDataSourceEventHandler.
+	dataSourceHandler sieve: self.
+	dataSourceHandler listElement: aListElement.
+	aListElement dataSource addEventHandler: dataSourceHandler.
+
+	sieveHandler := ToSieveEventHandler new
+		                     listElement: aListElement;
+		                     yourself.
+
+	self addEventHandler: sieveHandler
 ]
 
 { #category : #'api - hooks' }
 ToListElementSieve >> onUninstalledIn: aListElement [
 	" uninstall list element handlers and the queyrunner properly "
 
-	aListElement removeEventHandler: selectionHandler.
-	queryRunner onUninstalledIn: originalData.
-	originalData removeEventHandler: sharedHandler.
-	aListElement removeEventHandler: sharedHandler.
-	self removeEventHandler: sieveEventHandler.
-	self removeEventHandler: commandEventHandler.
-	sieveEventHandler := nil.
-	commandEventHandler := nil.
-	sharedHandler := nil.
-	originalData unmirrored.
-	originalData := nil.
+	" one have to consume commands that could have been postponed "
+	aListElement consumeFinalStepCommands.
+	aListElement removeEventHandler: listElementHandler.
+	aListElement dataSource removeEventHandler: dataSourceHandler.
+	self uninstallFilterApplierIn: aListElement.
+	self removeEventHandler: sieveHandler.
+	selecter onUninstalledIn: self.
+	selecter := nil.
+	listElementHandler := nil.
+	dataSourceHandler := nil.
+	sieveHandler := nil.
 	currentData := nil.
-	queryRunner := nil
+	filterApplier := nil.
+	originalIndexMap := nil
 ]
 
 { #category : #accessing }
@@ -155,14 +192,26 @@ ToListElementSieve >> originalIndexOf: anObject [
 { #category : #accessing }
 ToListElementSieve >> pattern [
 
-	^ queryRunner pattern
+	^ filterApplier pattern
 ]
 
 { #category : #accessing }
 ToListElementSieve >> pattern: aPattern [
 
-	queryRunner
-		pattern: aPattern
+	self dispatchEvent: ToSievePatternChangedEvent new.
+	filterApplier pattern: aPattern
+]
+
+{ #category : #'selection updating' }
+ToListElementSieve >> requestUpdateAllSelections [
+]
+
+{ #category : #accessing }
+ToListElementSieve >> selectedIndexes [
+
+	^ filterApplier selectedIndexes
+
+	
 ]
 
 { #category : #accessing }
@@ -174,17 +223,34 @@ ToListElementSieve >> selecter [
 { #category : #accessing }
 ToListElementSieve >> selectionModel [ 
 
-	^ selectionModel
+	^ selecter selectionModel
 ]
 
-{ #category : #private }
-ToListElementSieve >> updateCurrentData [
+{ #category : #'api - hooks' }
+ToListElementSieve >> uninstallFilterApplierIn: aListElement [
 
-	" get the filtered data "
-	currentData := queryRunner pattern
-		               ifEmpty: [ originalData ]
-		               ifNotEmpty: [
-			               queryRunner selectedIndexes collect: [ :idx |
-				               originalData at: idx ] ].
+	filterApplier onUninstalledIn: originalData.
+	originalData unmirrored.
+	originalData := nil.
 
+]
+
+{ #category : #enumerating }
+ToListElementSieve >> withLocalAndOriginalIndexDo: aBlock [
+	" aBlock takes a data, its local index and its original index "
+
+	self currentData withIndexDo: [ :d :localIndex |
+		| originalIndex |
+		originalIndex := originalIndexMap at: d.
+		aBlock value: d value: localIndex value: originalIndex ]
+]
+
+{ #category : #enumerating }
+ToListElementSieve >> withOriginalIndexDo: aBlock [
+	" aBlock takes a data an its index as arguments "
+
+	self currentData do: [ :d |
+		| idx |
+		idx := originalIndexMap at: d.
+		aBlock value: d value: idx ]
 ]

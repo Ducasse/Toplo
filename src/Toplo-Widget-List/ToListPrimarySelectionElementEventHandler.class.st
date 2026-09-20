@@ -2,7 +2,8 @@ Class {
 	#name : #ToListPrimarySelectionElementEventHandler,
 	#superclass : #ToListSelectionElementEventHandler,
 	#instVars : [
-		'differedUpdateTask'
+		'differedUpdateTask',
+		'wasSelectingOnClick'
 	],
 	#category : #'Toplo-Widget-List-Selection-Element'
 }
@@ -12,7 +13,7 @@ ToListPrimarySelectionElementEventHandler >> differUpdateSelectionFrom: anElemen
 
 	differedUpdateTask ifNotNil: [ ^ self ].
 	differedUpdateTask := BlTaskAction new action: [
-		                      anElement notifyPrimarySelectionDirty.
+		                      anElement requestUpdateAllSelections.
 		                      differedUpdateTask := nil ].
 	anElement enqueueTask: differedUpdateTask
 ]
@@ -20,19 +21,29 @@ ToListPrimarySelectionElementEventHandler >> differUpdateSelectionFrom: anElemen
 { #category : #'api - accessing' }
 ToListPrimarySelectionElementEventHandler >> eventsToHandle [
 
-	^ super eventsToHandle, {
-		  ToListPrimarySelectionDirtyEvent.
+	^ super eventsToHandle , {
+		  ToListCheckableNodeUseChanged.
 		  ToListPrimarySelectionChangedEvent }
+]
+
+{ #category : #'selection managing' }
+ToListPrimarySelectionElementEventHandler >> listCheckableNodeUseChanged: anEvent [
+
+	| listElement |
+	listElement := anEvent currentTarget.
+
+	listElement nodeManager checkableNode: listElement useCheckbox.
+	listElement useCheckbox
+		ifTrue: [
+				wasSelectingOnClick := listElement selectionMode selectOnClick.
+				listElement selectionMode selectOnClick: false ]
+		ifFalse: [
+		listElement selectionMode selectOnClick: wasSelectingOnClick ].
+	listElement deferOrValue: [ listElement notifyDataSourceChanged ]
 ]
 
 { #category : #'element handlers' }
 ToListPrimarySelectionElementEventHandler >> listPrimarySelectionChangedEvent: anEvent [
-
-	self updateSelectionFromEvent: anEvent
-]
-
-{ #category : #'element handlers' }
-ToListPrimarySelectionElementEventHandler >> listPrimarySelectionDirtyEvent: anEvent [
 
 	self updateSelectionFromEvent: anEvent
 ]

@@ -1,33 +1,18 @@
 Class {
 	#name : #ToTestCaseWithSpace,
-	#superclass : #TestCase,
-	#instVars : [
-		'space'
-	],
+	#superclass : #BlSpaceTestCase,
 	#category : #'Toplo-Tests-Core'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'skin management' }
 ToTestCaseWithSpace >> installNewSkinNowIn: anElement [
 	" bypass the normal skinRequest/skinInstallation scheme"
 
 	anElement space ifNil: [
 		Error signal:
 			'A non attached element can''t ask for an immediate skin change ' ].
-	anElement skinManagerDo: [ :sm |
-		sm requestUninstallSkinIn: anElement ].
-	anElement skinManager skinUninstaller ifNotNil: [ :su |
-		su applyOn: anElement ].
-	anElement ensuredSkinManager requestInstallSkinIn: anElement.
-	anElement skinManager skinInstaller ifNotNil: [ :si |
-		si applyOn: anElement ].
+	anElement ensuredSkinManager requestNewSkinIn: anElement.
+	anElement skinManager newSkinRequested ifTrue: [
+		anElement skinManager installNewSkinIn: anElement ].
 	anElement requestSkinApplication
-]
-
-{ #category : #running }
-ToTestCaseWithSpace >> setUp [ 
-
-	super setUp.
-	space := BlSpace new
-
 ]

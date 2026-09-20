@@ -1,25 +1,13 @@
 Class {
 	#name : #ToListSecondarySelectionElementEventHandler,
 	#superclass : #ToListSelectionElementEventHandler,
-	#instVars : [
-		'previousNode'
-	],
 	#category : #'Toplo-Widget-List-Selection-Element'
 }
-
-{ #category : #'element handlers' }
-ToListSecondarySelectionElementEventHandler >> elementScrolledEvent: anEvent [
-
-	super elementScrolledEvent: anEvent.
-	anEvent currentTarget spaceDo: [ :sp | 
-		sp mouseProcessor handleLastMouseMove ].
-
-]
 
 { #category : #'api - accessing' }
 ToListSecondarySelectionElementEventHandler >> eventsToHandle [
 
-	^ super eventsToHandle, {
+	^ super eventsToHandle , {
 		  ToListSecondarySelectionChangedEvent.
 		  BlMouseMoveEvent }
 ]
@@ -33,17 +21,13 @@ ToListSecondarySelectionElementEventHandler >> listSecondarySelectionChangedEven
 { #category : #'mouse handlers' }
 ToListSecondarySelectionElementEventHandler >> mouseMoveEvent: anEvent [
 
-	| target nodeContainer globalPosition childNode |
-	anEvent anyButtonPressed ifTrue: [ ^ self ].
+	| target innerElement |
 	target := anEvent currentTarget.
-	nodeContainer := target innerContainer.
-	globalPosition := anEvent position.
+	target isEnabled ifFalse: [ ^ self ].
+	innerElement := target innerElement.
 
-	childNode := nodeContainer selectableNodeContainingGlobalPosition: globalPosition.
-	childNode = previousNode ifTrue: [ ^ self ].
-	previousNode := childNode.
-	childNode ifNil: [
-		target secondarySelecter deselectAll.
-		^ self ].
-	target secondarySelecter selectOnlyIndex: childNode holder position
+	innerElement
+		selectableNodeContainingGlobalPosition: anEvent position
+		do: [ :nodeContainer | target secondarySelecter selectOnlyIndex: nodeContainer holder position ]
+		ifNone: [ target secondarySelecter deselectAll ]
 ]

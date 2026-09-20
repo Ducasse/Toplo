@@ -1,35 +1,34 @@
 Class {
 	#name : #ToDividerSkin,
 	#superclass : #ToRawSkin,
-	#category : #'Toplo-Widget-Pane'
+	#category : #'Toplo-Widget-Pane-Core'
 }
 
 { #category : #'event handling' }
-ToDividerSkin >> dragStartedSkinEvent: anEvent [
+ToDividerSkin >> dragEndedSkinEvent: anEvent [
 
-	super dragStartedSkinEvent: anEvent.
+	super dragEndedSkinEvent: anEvent.
 	anEvent elementDo: [ :e |
-		e mouseCursor: e resizerCursor ]
-]
-
-{ #category : #'event handling' }
-ToDividerSkin >> draggedSkinEvent: anEvent [
-
-	super draggedSkinEvent: anEvent.
-	anEvent elementDo: [ :e |
-		e mouseCursor: e resizerCursor.
-		e border: e hoveredBorder.
-		e background: e draggedBackground ]
+		e background: e defaultBackground ]
 ]
 
 { #category : #'event handling' }
 ToDividerSkin >> hoveredSkinEvent: anEvent [
 
 	super hoveredSkinEvent: anEvent.
-	anEvent elementDo: [ :e |
-		e mouseCursor: e resizerCursor.
-		e border: e hoveredBorder.
-		e background: e hoveredBackground ]
+	anEvent elementDo: [ :e | 
+			e mouseCursor: (self resizerCursorIn: e).
+			e background: (e valueOfTokenNamed: #'divider-hovered-background') ]
+]
+
+{ #category : #'event handling' }
+ToDividerSkin >> innerImageIn: aDivider [
+
+	^ aDivider isHorizontal
+		  ifTrue: [
+		  ToMaterialDesignIconProvider innerImageNamed: 'outlined_morehoriz' ]
+		  ifFalse: [
+		  ToMaterialDesignIconProvider innerImageNamed: 'outlined_morevert' ]
 ]
 
 { #category : #'event handling' }
@@ -37,16 +36,15 @@ ToDividerSkin >> installSkinEvent: anEvent [
 
 	super installSkinEvent: anEvent.
 	anEvent elementDo: [ :e |
-		e border: e defaultBorder.
-		e background: e defaultBackground ]
+			e background: e defaultBackground ]
 ]
 
 { #category : #'event handling' }
-ToDividerSkin >> leavedSkinEvent: anEvent [
+ToDividerSkin >> leftSkinEvent: anEvent [
 
-	super leavedSkinEvent: anEvent.
+	super leftSkinEvent: anEvent.
 	anEvent elementDo: [ :e |
-		e border: e defaultBorder.
+		e mouseCursor: Cursor normal.
 		e background: e defaultBackground ]
 ]
 
@@ -55,9 +53,7 @@ ToDividerSkin >> pressedSkinEvent: anEvent [
 
 	super pressedSkinEvent: anEvent.
 	anEvent elementDo: [ :e |
-		e mouseCursor: e resizerCursor.
-		e border: e pressedBorder.
-		e background: e pressedBackground ]
+		e background: (e valueOfTokenNamed: #'divider-pressed-background') ]
 ]
 
 { #category : #'event handling' }
@@ -65,7 +61,13 @@ ToDividerSkin >> releasedSkinEvent: anEvent [
 
 	super releasedSkinEvent: anEvent.
 	anEvent elementDo: [ :e |
-		e mouseCursor: Cursor normal.
-		e border: e defaultBorder.
 		e background: e defaultBackground ]
+]
+
+{ #category : #accessing }
+ToDividerSkin >> resizerCursorIn: aDivider [
+
+	^ aDivider isHorizontal
+		  ifTrue: [ Cursor resizeTop ]
+		  ifFalse: [ Cursor resizeRight ]
 ]

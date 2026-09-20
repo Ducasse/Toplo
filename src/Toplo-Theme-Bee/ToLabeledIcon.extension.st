@@ -1,17 +1,10 @@
 Extension { #name : #ToLabeledIcon }
 
 { #category : #'*Toplo-Theme-Bee' }
-ToLabeledIcon >> defaultBeeStyleStamps [
-
-	^ #( #'labeled-icon' )
-]
-
-{ #category : #'*Toplo-Theme-Bee' }
 ToLabeledIcon >> installBeeStyle [
 
 	super installBeeStyle.
 
-	self startFiller addStamp: #'labeled-icon-filler'.
 	self icon ifNotNil: [ :ic | ic addStamp: #icon ].
 	self label ifNotNil: [ :la | la addStamp: #label ].
 

@@ -1,25 +1,14 @@
 Class {
 	#name : #ToListPrimarySelectionMode,
-	#superclass : #ToAbstractListSelectionMode,
+	#superclass : #ToListRootSelectionMode,
 	#instVars : [
-		'requestFocusOnMouseDown',
-		'preserveSelectionOnFocused',
-		'selectOnMouseDown',
+		'selectOnPressed',
+		'selectOnClick',
+		'deselectOnPressed',
 		'multiple'
 	],
 	#category : #'Toplo-Widget-List-Selection-Mode'
 }
-
-{ #category : #testing }
-ToListPrimarySelectionMode >> allowRequestFocusOnMouseDown [
-
-	| max |
-	self isDisabled ifTrue: [ ^ self requestFocusOnMouseDown ].
-	max := self maxSelectedIndexesForSelectionPreserving.
-	self selectedIndexesCount > max ifTrue: [
-		self preserveSelectionOnFocused ifTrue: [ ^ false ] ].
-	^ self requestFocusOnMouseDown
-]
 
 { #category : #accessing }
 ToListPrimarySelectionMode >> beMultipleSelection [
@@ -34,27 +23,35 @@ ToListPrimarySelectionMode >> beSingleSelection [
 ]
 
 { #category : #initialization }
-ToListPrimarySelectionMode >> defaultElementBuilder [ 
+ToListPrimarySelectionMode >> defaultSelectionOption [
 
-	^ [ ToListPrimarySelectionElement new ]
+	^ ToListSelectionOption new
+		  grouped: true;
+		  beneath: true;
+		  selectionSkinEventClass: ToSelectedSkinEvent;
+		  deselectionSkinEventClass: ToDeselectedSkinEvent;
+		  elementFactory: [ ToListPrimarySelectionElement new ]
 ]
 
-{ #category : #initialization }
-ToListPrimarySelectionMode >> defaultOption [
+{ #category : #accessing }
+ToListPrimarySelectionMode >> deselectOnPressed [
 
-	^ (ToListSelectionOption grouped)
-		  beneath: true;
-		  triggerSelectionState: true;
-		 yourself
+	^ deselectOnPressed
+]
+
+{ #category : #accessing }
+ToListPrimarySelectionMode >> deselectOnPressed: aBoolean [
+
+	deselectOnPressed := aBoolean
 ]
 
 { #category : #initialization }
 ToListPrimarySelectionMode >> initialize [
 
 	super initialize.
-	requestFocusOnMouseDown := true.
-	preserveSelectionOnFocused := true.
-	selectOnMouseDown := false.
+	selectOnPressed := false.
+	selectOnClick := true.
+	deselectOnPressed := false.
 	multiple := true
 ]
 
@@ -70,14 +67,8 @@ ToListPrimarySelectionMode >> isPrimary [
 	^ true
 ]
 
-{ #category : #initialization }
-ToListPrimarySelectionMode >> listEventHandlerClass [
-
-	^ ToListPrimarySelectionElementEventHandler 
-]
-
 { #category : #testing }
-ToListPrimarySelectionMode >> maxSelectedIndexesForSelectionPreserving [
+ToListPrimarySelectionMode >> minSelectedIndexesCountForSelectionPreserving [
 
 	^ self isMultipleSelection
 		       ifTrue: [ 1 ]
@@ -100,125 +91,148 @@ ToListPrimarySelectionMode >> multiple: aBoolean [
 ]
 
 { #category : #'instance creation' }
-ToListPrimarySelectionMode >> newListEventHandler [
+ToListPrimarySelectionMode >> newSelecter [
+
+	^ ToPrimarySelecter new
+]
+
+{ #category : #'instance creation' }
+ToListPrimarySelectionMode >> newSelectionChangedEventHandler [ 
 
 	^ ToListPrimarySelectionElementEventHandler new
 ]
 
 { #category : #'instance creation' }
-ToListPrimarySelectionMode >> newSelecter [
-
-	^ ToPrimarySelecter new
-		  selectionChangedEventClass: self selectionChangedEventClass;
-		  yourself
-]
-
-{ #category : #'instance creation' }
 ToListPrimarySelectionMode >> newSelectionModelIn: aListElement [
 
-	^ aListElement newPrimarySelectionModel 
+	^ ToPrimarySelectionModel new
 ]
 
 { #category : #accessing }
 ToListPrimarySelectionMode >> onAddedNode: aNode [
 
-	aNode clickEventHandlerClasses do: [ :cls |
+	aNode clickEventHandlerClass ifNotNil: [ :cls |
 		aNode addEventHandler: cls new ]
 ]
 
-{ #category : #'event handling' }
+{ #category : #'selection managing' }
+ToListPrimarySelectionMode >> onClickEvent: anEvent onMultpleSelectionListNode: aNode [
+	" implement the default/standard selection/deselection protocol"
+
+	| index modifiers shift primaryModifier passiveNode |
+	index := aNode holder position.
+	modifiers := anEvent sourceEvent modifiers.
+	shift := modifiers notNil and: [ modifiers isShift ].
+
+	primaryModifier := modifiers notNil and: [
+		                   modifiers isPrimaryModifier ].
+	" a passive node is a node that can't be selected directly with the mouse.
+	As an example, a list that uses a checkbox on each node to drive the selection "
+	passiveNode := selectOnPressed not and: [ selectOnClick not ].
+	" Shift "
+	shift ifTrue: [
+			| curr |
+			curr := self selecter currentIndex.
+			self selecter selectIndex: (curr min: index) to: (index max: curr).
+			^ self ].
+	" CMD-CTRL "
+	(primaryModifier or: [
+		 passiveNode or: [ selectOnPressed or: [ deselectOnPressed ] ] ])
+		ifTrue: [
+				(self selectionModel containsIndex: index)
+					ifTrue: [ self selecter deselectIndex: index ]
+					ifFalse: [ self selecter selectIndex: index ].
+				^ self ].
+	" No modifier"
+	self selecter selectOnlyIndex: index.
+	^ self
+]
+
+{ #category : #'selection managing' }
 ToListPrimarySelectionMode >> onClickEvent: anEvent onNode: aNode [
 	" implement the default/standard selection/deselection protocol"
 
-	self isDisabled ifTrue: [ ^ self ].
+	self isMultipleSelection ifTrue: [
+		^ self onClickEvent: anEvent onMultpleSelectionListNode: aNode ].
+	self onClickEvent: anEvent onSingleSelectionListNode: aNode
+]
 
-	" Multiple selection "
-	self isMultipleSelection ifTrue: [ " SHIFT "
-		anEvent sourceEvent modifiers isShift ifTrue: [
-			| curr |
-			curr := self selecter currentIndex.
-			self selecter selectIndex: curr to: aNode holder position.
-			^ self ].
-		" CMD-CTRL "
-		(anEvent sourceEvent modifiers isPrimaryModifier or: [
-			 selectOnMouseDown ]) ifTrue: [
-			self selectOrDeselectOnNode: aNode.
-			^ self ].
-		" No modifier"
-		self selecter selectOnlyIndex: aNode holder position.
-		^ self ].
+{ #category : #'selection managing' }
+ToListPrimarySelectionMode >> onClickEvent: anEvent onSingleSelectionListNode: aNode [
+	" implement the default/standard selection/deselection protocol"
+
+	| index modifiers shift primaryModifier passiveNode |
+
+	index := aNode holder position.
+	modifiers := anEvent sourceEvent modifiers.
+	shift := modifiers notNil and: [ modifiers isShift ].
+
+	primaryModifier := modifiers notNil and: [
+		                   modifiers isPrimaryModifier ].
+	" a passive node is a node that can't be selected directly with the mouse.
+	As an example, a list that uses a checkbox on each node to drive the selection "
+	passiveNode := selectOnPressed not and: [ selectOnClick not ].
 
 	" Single selection "
 	" CMD-CTRL  "
-	(anEvent sourceEvent modifiers isPrimaryModifier or: [
-		 selectOnMouseDown ]) ifTrue: [
-		| index |
-		index := aNode holder position.
-		(self selectionModel containsIndex: index) ifTrue: [
-			^ self selecter deselectIndex: index ] ].
+	(primaryModifier or: [ passiveNode or: [ selectOnPressed ] ])
+		ifTrue: [
+				(deselectOnPressed and: [
+					 self selectionModel containsIndex: index ]) ifTrue: [
+					^ self selecter deselectIndex: index ] ].
 
 	" No modifier"
-	self selecter selectOnlyIndex: aNode holder position
+	self selecter selectOnlyIndex: index
 ]
 
 { #category : #accessing }
 ToListPrimarySelectionMode >> onRemovedNode: aNode [
 
 	(aNode eventDispatcher handlers select: [ :handler |
-		 aNode clickEventHandlerClasses anySatisfy: [ :cls |
-			 handler class = cls ] ]) do: [ :handler |
+		 handler class = aNode clickEventHandlerClass ]) do: [ :handler |
 		aNode removeEventHandler: handler ]
 ]
 
 { #category : #accessing }
-ToListPrimarySelectionMode >> preserveSelectionOnFocused [
+ToListPrimarySelectionMode >> selectOnClick [
 
-	^ preserveSelectionOnFocused
+	^ selectOnClick
 ]
 
 { #category : #accessing }
-ToListPrimarySelectionMode >> preserveSelectionOnFocused: aBoolean [
+ToListPrimarySelectionMode >> selectOnClick: aBoolean [
 
-	preserveSelectionOnFocused := aBoolean
+	selectOnClick := aBoolean
 ]
 
 { #category : #accessing }
-ToListPrimarySelectionMode >> requestFocusOnMouseDown [
+ToListPrimarySelectionMode >> selectOnPressed [
 
-	^ requestFocusOnMouseDown
+	^ selectOnPressed
 ]
 
 { #category : #accessing }
-ToListPrimarySelectionMode >> requestFocusOnMouseDown: aBoolean [
+ToListPrimarySelectionMode >> selectOnPressed: aBoolean [
 
-	requestFocusOnMouseDown := aBoolean 
-]
-
-{ #category : #accessing }
-ToListPrimarySelectionMode >> selectOnMouseDown [
-
-	^ selectOnMouseDown
-]
-
-{ #category : #accessing }
-ToListPrimarySelectionMode >> selectOnMouseDown: aBoolean [
-
-	selectOnMouseDown := aBoolean
-]
-
-{ #category : #'event handling' }
-ToListPrimarySelectionMode >> selectOrDeselectOnNode: aNode [
-
-	| index target |
-	index := aNode holder position.
-	target := aNode holder listElement.
-	(target selectionModel containsIndex: index)
-		ifTrue: [ self selecter deselectIndex: index ]
-		ifFalse: [ self selecter selectIndex: index ]
+	selectOnPressed := aBoolean
 ]
 
 { #category : #'instance creation' }
 ToListPrimarySelectionMode >> selectionChangedEventClass [ 
 
 	^ ToListPrimarySelectionChangedEvent
+]
+
+{ #category : #accessing }
+ToListPrimarySelectionMode >> single: aBoolean [
+
+	self multiple: aBoolean not
+]
+
+{ #category : #initialization }
+ToListPrimarySelectionMode >> withDefaultSelectionSkinEvents [
+
+	selectionOption
+		selectionSkinEventClass: ToSelectedSkinEvent;
+		deselectionSkinEventClass: ToDeselectedSkinEvent
 ]

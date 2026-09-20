@@ -4,27 +4,37 @@ Class {
 	#category : #'Toplo-Core-Tooltip'
 }
 
-{ #category : #initialization }
-ToTooltipWindow >> defaultElevation [
+{ #category : #'t - relayoutable window element - accessing' }
+ToTooltipWindow >> correctedPositionAccordingToAnchorRoot [
 
-	^ BlRelativeElevation elevation: (SmallInteger maxVal - 200)
+	| t rect rootRect bndsInSpace |
+	bndsInSpace := self measuredBounds inSpace.
+	rect := (bndsInSpace inChild: self anchorRoot) bounds asRectangle.
+	rootRect := 0 @ 0 extent: self anchorRoot extent.
+	" just translate the position to remain (if possible) within the root bounds "
+	t := rect amountToTranslateWithin: rootRect.
+	" now try to avoid the popup to be over the mouse position 
+	https://github.com/pharo-graphics/Toplo/issues/269"
+	self spaceDo: [ :sp |
+			sp mouseProcessor lastMouseMoveEvent ifNotNil: [ :lastMouseMove |
+					| fixedBounds |
+					fixedBounds := BlBounds
+						               origin: bndsInSpace position + t
+						               extent: bndsInSpace extent.
+					(fixedBounds containsPoint: lastMouseMove position) ifTrue: [
+						t := t - (bndsInSpace position - lastMouseMove position) + 10
+						     @ 10 ] ] ].
+	^ self measuredPosition + t
 ]
 
-{ #category : #initialization }
-ToTooltipWindow >> initialize [
+{ #category : #accessing }
+ToTooltipWindow >> defaultElevation [
 
-	super initialize.
-	self fitContent.
-	self addEventHandler: ToTooltipWindowEventHandler new
+	^ BlRelativeElevation elevation: (SmallInteger maxVal - 300)
 ]
 
 { #category : #skin }
-ToTooltipWindow >> installRawStyle [
+ToTooltipWindow >> newRawSkin [
 
-	super installRawStyle.
-	self padding: (BlInsets
-			 horizontal: (self valueOfTokenNamed: #'padding-content-H')
-			 vertical: (self valueOfTokenNamed: #'padding-content-V')).
-	(self valueOfTokenNamed: #'animation-window-opening') value: self.
-	self effect: (self valueOfTokenNamed: #'effect-window')
+	^ ToTooltipWindowSkin new
 ]
